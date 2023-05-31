@@ -32,8 +32,8 @@ def do_loop(cpu_threads_num):
         time2 = time.time()
         w = "{} {}".format(j, (time2 - time1))
         print(w)
-        print("write to {}".format(f))
         with open(data_txt.format(branch, parallel_num, cpu_threads_num), "a+") as f:
+            print("write to {}".format(f))
             f.write(w + "\n")
 
 for cpu_threads_num in cpu_threads_num_list: 
