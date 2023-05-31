@@ -2,3 +2,4 @@ sub*
 *.out
 hybrid*
 *.o
+*.txt
