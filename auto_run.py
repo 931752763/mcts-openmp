@@ -25,15 +25,15 @@ os.system("make")
 data_txt = "../data/{}_{}_{}.txt"
 
 def do_loop(cpu_threads_num):
-    with open(data_txt.format(branch, parallel_num, cpu_threads_num), "a+") as f:
-        for j in range(20):
-            time1 = time.time()
-            result = subprocess.run(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
-            # result = subprocess.run(["ls"], stdout=subprocess.PIPE)
-            time2 = time.time()
-            w = "{} {}".format(j, (time2 - time1))
-            print(w)
-            print("write to {}".format(f))
+    for j in range(20):
+        time1 = time.time()
+        result = subprocess.run(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
+        # result = subprocess.run(["ls"], stdout=subprocess.PIPE)
+        time2 = time.time()
+        w = "{} {}".format(j, (time2 - time1))
+        print(w)
+        print("write to {}".format(f))
+        with open(data_txt.format(branch, parallel_num, cpu_threads_num), "a+") as f:
             f.write(w + "\n")
 
 for cpu_threads_num in cpu_threads_num_list: 
