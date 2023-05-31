@@ -25,7 +25,7 @@ os.system("make")
 data_txt = "../data/{}_{}_{}.txt"
 
 def do_loop(cpu_threads_num):
-    for j in range(20):
+    for j in range(10):
         time1 = time.time()
         result = subprocess.run(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
         # result = subprocess.run(["ls"], stdout=subprocess.PIPE)
