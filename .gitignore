@@ -1,3 +1,4 @@
 sub*
 *.out
 hybrid*
+*.o
