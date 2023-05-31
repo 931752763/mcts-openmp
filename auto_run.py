@@ -22,10 +22,10 @@ print("{} {} {}", branch, parallel_num, cpu_threads_num_list)
 
 os.system("git switch " + branch)
 os.system("make")
-
+data_txt = "../data/{}_{}_{}.txt"
 
 def do_loop(cpu_threads_num):
-    with open("./data/{}_{}_{}.txt".format(branch, parallel_num, cpu_threads_num), "a+") as f:
+    with open(data_txt.format(branch, parallel_num, cpu_threads_num), "a+") as f:
         for j in range(20):
             time1 = time.time()
             result = subprocess.run(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
@@ -50,5 +50,5 @@ for cpu_threads_num in cpu_threads_num_list:
     end = time.time()
     s = "total {}".format((end - begin))
     print(s)
-    with open("./data/{}_{}_{}.txt".format(branch, parallel_num, cpu_threads_num), "a+") as f:
+    with open(data_txt.format(branch, parallel_num, cpu_threads_num), "a+") as f:
         f.write(s + "\n")
