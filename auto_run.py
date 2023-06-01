@@ -24,22 +24,29 @@ print("parallel_num: {}, cpu_threads_num_list: {}".format(parallel_num, cpu_thre
 data_txt = "../data/{}_{}_{}.xlsx"
 
 def do_loop(cpu_threads_num):
-    wb = Workbook()
-    ws = wb.active
+    print("mcts cpu_threads_num: {}, mcts will execute 10 times in sequence".format(cpu_threads_num))
     file = data_txt.format(branch, parallel_num, cpu_threads_num)
     for j in range(10):
         time1 = time.time()
         result = subprocess.run(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
         # result = subprocess.run(["ls"], stdout=subprocess.PIPE)
         time2 = time.time()
-        new_row = [os.getpid(), threading.get_native_id(), (time2 - time1)]
+        new_row = [threading.get_native_id(), (time2 - time1)]
         print(new_row)
-        ws.append(new_row)
-        wb.save(file)
+        with lock:
+            wb = load_workbook(file)
+            ws = wb.active
+            ws.append(new_row)
+            wb.save(file)
 
-for cpu_threads_num in cpu_threads_num_list: 
+for cpu_threads_num in cpu_threads_num_list:
+    wb = Workbook()
+    ws = wb.active
+    file = data_txt.format(branch, parallel_num, cpu_threads_num)
+    wb.save(file)
     begin = time.time()
     t = []
+    lock = threading.Lock()
     for i in range(parallel_num):
         ti = threading.Thread(target=do_loop, args=(cpu_threads_num, ))
         t.append(ti)
