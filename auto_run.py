@@ -43,8 +43,11 @@ for cpu_threads_num in cpu_threads_num_list:
     wb = Workbook()
     ws = wb.active
     file = data_txt.format(branch, parallel_num, cpu_threads_num)
+    title = ["thread_id", "time (s)"]
+    ws.append(title)
     wb.save(file)
     begin = time.time()
+    begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
     t = []
     lock = threading.Lock()
     for i in range(parallel_num):
@@ -56,5 +59,11 @@ for cpu_threads_num in cpu_threads_num_list:
         t[i].join()
 
     end = time.time()
+    end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
+    with lock:
+        wb = load_workbook(file)
+        ws = wb.active
+        ws.append([begin_str, end_str])
+        wb.save(file)
     s = "total {}".format((end - begin))
     print(s)
