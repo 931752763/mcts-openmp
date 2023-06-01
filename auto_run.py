@@ -3,7 +3,7 @@ import time
 import sys
 import threading
 import os, getopt
-
+from openpyxl import Workbook, load_workbook
 
 # python auto_run.py -b {branch} -p {parallel_num} -c {cpu_threads_num_list}
 branch = ""
@@ -18,23 +18,24 @@ for opt_name,opt_value in opts:
     if opt_name in ('-c'):
         cpu_threads_num_list = list(map(int, opt_value.split(" ")))
 
-print("{} {} {}", branch, parallel_num, cpu_threads_num_list)
-
-os.system("git switch " + branch)
+os.system("git checkout " + branch)
 os.system("make")
-data_txt = "../data/{}_{}_{}.txt"
+print("parallel_num: {}, cpu_threads_num_list: {}".format(parallel_num, cpu_threads_num_list))
+data_txt = "../data/{}_{}_{}.xlsx"
 
 def do_loop(cpu_threads_num):
+    wb = Workbook()
+    ws = wb.active
+    file = data_txt.format(branch, parallel_num, cpu_threads_num)
     for j in range(10):
         time1 = time.time()
         result = subprocess.run(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
         # result = subprocess.run(["ls"], stdout=subprocess.PIPE)
         time2 = time.time()
-        w = "{} {}".format(j, (time2 - time1))
-        print(w)
-        with open(data_txt.format(branch, parallel_num, cpu_threads_num), "a+") as f:
-            print("write to {}".format(f))
-            f.write(w + "\n")
+        new_row = [os.getpid(), threading.get_native_id(), (time2 - time1)]
+        print(new_row)
+        ws.append(new_row)
+        wb.save(file)
 
 for cpu_threads_num in cpu_threads_num_list: 
     begin = time.time()
@@ -50,5 +51,3 @@ for cpu_threads_num in cpu_threads_num_list:
     end = time.time()
     s = "total {}".format((end - begin))
     print(s)
-    with open(data_txt.format(branch, parallel_num, cpu_threads_num), "a+") as f:
-        f.write(s + "\n")
