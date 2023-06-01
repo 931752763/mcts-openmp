@@ -67,3 +67,5 @@ for cpu_threads_num in cpu_threads_num_list:
         wb.save(file)
     s = "total {}".format((end - begin))
     print(s)
+    print("sleep 5 min to seperate")
+    time.sleep(300)
