@@ -11,8 +11,8 @@ def do_loop(cpu_threads_num, parallel_num):
     file = data_txt.format(branch, parallel_num, cpu_threads_num)
     for j in range(10):
         time1 = time.time()
-        # process = subprocess.Popen(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
-        process = subprocess.Popen(["ls"], stdout=subprocess.PIPE)
+        process = subprocess.Popen(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
+        # process = subprocess.Popen(["ls"], stdout=subprocess.PIPE)
         process.wait()
         time2 = time.time()
         new_row = [process.pid, (time2 - time1)]
