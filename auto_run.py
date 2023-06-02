@@ -12,8 +12,8 @@ def do_loop(cpu_threads_num, parallel_num):
     for j in range(10):
         time1 = time.time()
         # process = subprocess.Popen(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
-        # process.wait()
-        result = subprocess.run(["ls"], stdout=subprocess.PIPE)
+        process = subprocess.Popen(["ls"], stdout=subprocess.PIPE)
+        process.wait()
         time2 = time.time()
         new_row = [process.pid, (time2 - time1)]
         print(new_row)
@@ -24,7 +24,7 @@ def do_loop(cpu_threads_num, parallel_num):
             wb.save(file)
 
 
-# python auto_run.py -b {branch} -p {parallel_num} -c {cpu_threads_num_list}
+# python auto_run.py -b {branch_list} -p {parallel_num} -c {cpu_threads_num_list}
 branch_list = []
 parallel_num_list = []
 cpu_threads_num_list = []
@@ -77,5 +77,5 @@ for branch in branch_list:
                 wb.save(file)
             s = "total {}".format((end - begin))
             print(s)
-            print("sleep 5 min to seperate")
-            time.sleep(300)
+            # print("sleep 5 min to seperate")
+            # time.sleep(300)
