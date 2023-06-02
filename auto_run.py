@@ -28,10 +28,11 @@ def do_loop(cpu_threads_num):
     file = data_txt.format(branch, parallel_num, cpu_threads_num)
     for j in range(10):
         time1 = time.time()
-        result = subprocess.run(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
+        process = subprocess.Popen(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
+        process.wait()
         # result = subprocess.run(["ls"], stdout=subprocess.PIPE)
         time2 = time.time()
-        new_row = [threading.get_native_id(), (time2 - time1)]
+        new_row = [process.pid, (time2 - time1)]
         print(new_row)
         with lock:
             wb = load_workbook(file)
@@ -40,6 +41,11 @@ def do_loop(cpu_threads_num):
             wb.save(file)
 
 for cpu_threads_num in cpu_threads_num_list:
+    if branch == "openmp":
+        omp_num_threads = cpu_threads_num + 2
+        subprocess.run(["export", "OMP_NUM_THREADS={}".format(omp_num_threads)], stdout=subprocess.PIPE)
+        print("openmp OMP_NUM_THREADS:")
+        subprocess.run(["echo", "$OMP_NUM_THREADS"], stdout=subprocess.PIPE)
     wb = Workbook()
     ws = wb.active
     file = data_txt.format(branch, parallel_num, cpu_threads_num)
