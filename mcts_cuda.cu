@@ -342,7 +342,7 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 	cudaMalloc(&c_j_d, sizeof(int) * total * total);
 
 	// hybrid cpu threads info
-	pthread_t *tids = (pthread_t *)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
+	// pthread_t *tids = (pthread_t *)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
 	thread_arg *args = (thread_arg *)malloc(sizeof(thread_arg) * CPU_THREADS_NUM);
 	for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 	{
@@ -469,7 +469,7 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 {
 	std::stack<TreeNode *> S;
 	S.push(node);
-	pthread_t *tids = (pthread_t *)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
+	// pthread_t *tids = (pthread_t *)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
 	thread_arg *args = (thread_arg *)malloc(sizeof(thread_arg) * CPU_THREADS_NUM);
 	for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 	{
@@ -539,7 +539,7 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 	{
 		free(args[ti].seq);
 	}
-	free(tids);
+	// free(tids);
 	free(args);
 }
 
