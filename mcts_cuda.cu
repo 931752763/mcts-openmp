@@ -325,9 +325,15 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 				children_index = (children_index + 1) % csize;
 			}
 
-			thrust::device_ptr<double> cuda_win_increase = thrust::device_malloc<double>(THREADS_NUM);
-			thrust::device_ptr<double> cuda_sim = thrust::device_malloc<double>(THREADS_NUM);
-			thrust::device_ptr<int> cuda_step = thrust::device_malloc<int>(THREADS_NUM);
+			// thrust::device_ptr<double> cuda_win_increase = thrust::device_malloc<double>(THREADS_NUM);
+			// thrust::device_ptr<double> cuda_sim = thrust::device_malloc<double>(THREADS_NUM);
+			// thrust::device_ptr<int> cuda_step = thrust::device_malloc<int>(THREADS_NUM);
+			double* cuda_win_increase;
+			double* cuda_sim;
+			int* cuda_step;
+			cudaMalloc(&cuda_win_increase, sizeof(double) * THREADS_NUM);
+			cudaMalloc(&cuda_sim, sizeof(double) * THREADS_NUM);
+			cudaMalloc(&cuda_step, sizeof(int) * THREADS_NUM);
 
 			cudaMemcpy(c_i_d, c_i, sizeof(int)*total * total, cudaMemcpyHostToDevice);
 			cudaMemcpy(c_j_d, c_j, sizeof(int)*total * total, cudaMemcpyHostToDevice);
@@ -339,7 +345,9 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 			double timeLeft = maxTime - diff / MILLION;
 
 
-			run_simulation <<< grid_dim, block_dim >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase.get(), cuda_step.get(), cuda_sim.get(),
+			// run_simulation <<< grid_dim, block_dim >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase.get(), cuda_step.get(), cuda_sim.get(),
+			//         bd_size, time(NULL), std::min(MAX_GAME_TIME_9_9, timeLeft));
+			run_simulation <<< grid_dim, block_dim >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
 			        bd_size, time(NULL), std::min(MAX_GAME_TIME_9_9, timeLeft));
 
 
@@ -356,9 +364,12 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 			}
 
 
-			cudaMemcpy(win_increase, cuda_win_increase.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			cudaMemcpy(step_increase, cuda_step.get(), sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			cudaMemcpy(sim_increase, cuda_sim.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			// cudaMemcpy(win_increase, cuda_win_increase.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			// cudaMemcpy(step_increase, cuda_step.get(), sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			// cudaMemcpy(sim_increase, cuda_sim.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			cudaMemcpy(win_increase, cuda_win_increase, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			cudaMemcpy(step_increase, cuda_step, sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			cudaMemcpy(sim_increase, cuda_sim, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 
 			double total_sim = 0.0;
 			double total_win = 0.0;
@@ -370,9 +381,13 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 			}
 			update(f, win_increase, sim_increase, incre, THREADS_NUM);
 
-			thrust::device_free(cuda_win_increase);
-			thrust::device_free(cuda_step);
-			thrust::device_free(cuda_sim);
+			// thrust::device_free(cuda_win_increase);
+			// thrust::device_free(cuda_step);
+			// thrust::device_free(cuda_sim);
+			cudaFree(cuda_win_increase);
+			cudaFree(cuda_step);
+			cudaFree(cuda_sim);
+
 			if (checkAbort())break;
 		}
 
@@ -435,9 +450,9 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 		if (checkAbort()) break;
 	}
 
-	for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
-		free(args[ti].seq);
-	}
+	// for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
+	// 	free(args[ti].seq);
+	// }
 	free(tids);
 	free(args);
 }

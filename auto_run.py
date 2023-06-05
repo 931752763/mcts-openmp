@@ -5,23 +5,29 @@ import threading
 import os, getopt
 from openpyxl import Workbook, load_workbook
 
+def write_excel(file, new_row):
+    with lock:
+        wb = load_workbook(file)
+        ws = wb.active
+        ws.append(new_row)
+        wb.save(file)
 
 def do_loop(cpu_threads_num, parallel_num):
     print("mcts cpu_threads_num: {}, parallel_num: {}, mcts will execute 10 times in sequence".format(cpu_threads_num, parallel_num))
     file = data_txt.format(branch, parallel_num, cpu_threads_num)
     for j in range(10):
         time1 = time.time()
-        process = subprocess.Popen(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE)
-        # process = subprocess.Popen(["ls"], stdout=subprocess.PIPE)
-        process.wait()
+        process = subprocess.Popen(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # process = subprocess.Popen(["ls /bing"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        res = process.communicate()
+        # print(res)
         time2 = time.time()
-        new_row = [process.pid, (time2 - time1)]
+        if process.returncode != 0:
+            new_row = ["{}-error".format(process.pid), (time2 - time1)]
+        else:
+            new_row = [process.pid, (time2 - time1)]
         print(new_row)
-        with lock:
-            wb = load_workbook(file)
-            ws = wb.active
-            ws.append(new_row)
-            wb.save(file)
+        write_excel(file, new_row)
 
 
 # python auto_run.py -b {branch_list} -p {parallel_num} -c {cpu_threads_num_list}
@@ -46,6 +52,9 @@ for branch in branch_list:
 
     for cpu_threads_num in cpu_threads_num_list:
         for parallel_num in parallel_num_list:
+            print("check gcc version")
+            process = subprocess.run(["gcc", "--version"], stdout=subprocess.PIPE)
+            print(process.stdout)
             if branch == "openmp":
                 omp_num_threads = cpu_threads_num + 2
                 os.environ['OMP_NUM_THREADS'] = str(omp_num_threads)
@@ -70,11 +79,8 @@ for branch in branch_list:
 
             end = time.time()
             end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
-            with lock:
-                wb = load_workbook(file)
-                ws = wb.active
-                ws.append([begin_str, end_str])
-                wb.save(file)
+            new_row = [begin_str, end_str]
+            write_excel(file, new_row)
             s = "total {}".format((end - begin))
             print(s)
             # print("sleep 5 min to seperate")
