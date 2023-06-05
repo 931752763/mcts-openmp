@@ -376,9 +376,12 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 			int children_index = 0;
 			std::vector<TreeNode *> children = f->get_children();
 
-			thrust::device_ptr<double> cuda_win_increase = thrust::device_malloc<double>(THREADS_NUM);
-			thrust::device_ptr<double> cuda_sim = thrust::device_malloc<double>(THREADS_NUM);
-			thrust::device_ptr<int> cuda_step = thrust::device_malloc<int>(THREADS_NUM);
+			double* cuda_win_increase;
+			double* cuda_sim;
+			int* cuda_step;
+			cudaMalloc(&cuda_win_increase, sizeof(double) * THREADS_NUM);
+			cudaMalloc(&cuda_sim, sizeof(double) * THREADS_NUM);
+			cudaMalloc(&cuda_step, sizeof(int) * THREADS_NUM);
 			// collect cpu thread data
 			children_index = 0;
 			double thread_sim = 0.0;
@@ -432,9 +435,12 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 				children_index = (children_index + 1) % csize;
 			}
 
-			cudaMemcpy(win_increase, cuda_win_increase.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			cudaMemcpy(step_increase, cuda_step.get(), sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			cudaMemcpy(sim_increase, cuda_sim.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			// cudaMemcpy(win_increase, cuda_win_increase.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			// cudaMemcpy(step_increase, cuda_step.get(), sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			// cudaMemcpy(sim_increase, cuda_sim.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			cudaMemcpy(win_increase, cuda_win_increase, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			cudaMemcpy(step_increase, cuda_step, sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			cudaMemcpy(sim_increase, cuda_sim, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 
 			double total_sim = 0.0;
 			double total_win = 0.0;
@@ -447,11 +453,14 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 			}
 			update(f, win_increase, sim_increase, incre, THREADS_NUM);
 
-			thrust::device_free(cuda_win_increase);
-			thrust::device_free(cuda_step);
-			thrust::device_free(cuda_sim);
-			if (checkAbort())
-				break;
+			// thrust::device_free(cuda_win_increase);
+			// thrust::device_free(cuda_step);
+			// thrust::device_free(cuda_sim);
+			cudaFree(cuda_win_increase);
+			cudaFree(cuda_step);
+			cudaFree(cuda_sim);
+
+			if (checkAbort())break;
 		}
 
 		if (checkAbort())
@@ -535,11 +544,10 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 			break;
 	}
 
-	for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
-	{
-		free(args[ti].seq);
-	}
-	// free(tids);
+	// for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
+	// 	free(args[ti].seq);
+	// }
+	free(tids);
 	free(args);
 }
 
