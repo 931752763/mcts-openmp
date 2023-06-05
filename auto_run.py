@@ -3,7 +3,15 @@ import time
 import sys
 import threading
 import os, getopt
+import os.path
 from openpyxl import Workbook, load_workbook
+
+def create_excel(file):
+    wb = Workbook()
+    ws = wb.active
+    title = ["thread_id", "time (s)"]
+    ws.append(title)
+    wb.save(file)
 
 def write_excel(file, new_row):
     with lock:
@@ -15,7 +23,7 @@ def write_excel(file, new_row):
 def do_loop(cpu_threads_num, parallel_num):
     print("mcts cpu_threads_num: {}, parallel_num: {}, mcts will execute 10 times in sequence".format(cpu_threads_num, parallel_num))
     file = data_txt.format(branch, parallel_num, cpu_threads_num)
-    for j in range(10):
+    for j in range(20):
         time1 = time.time()
         process = subprocess.Popen(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # process = subprocess.Popen(["ls /bing"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -59,12 +67,11 @@ for branch in branch_list:
                 omp_num_threads = cpu_threads_num + 2
                 os.environ['OMP_NUM_THREADS'] = str(omp_num_threads)
                 print("openmp OMP_NUM_THREADS = {}".format(omp_num_threads))
-            wb = Workbook()
-            ws = wb.active
+            
             file = data_txt.format(branch, parallel_num, cpu_threads_num)
-            title = ["thread_id", "time (s)"]
-            ws.append(title)
-            wb.save(file)
+            if not os.path.isfile(file):
+                create_excel(file)
+            
             begin = time.time()
             begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
             t = []
