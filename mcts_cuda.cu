@@ -418,7 +418,7 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 					diff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
 					double timeLeft = maxTime - diff / MILLION;
 // 					printf("run_simulation1 \n");
-					run_simulation<<<grid_dim, block_dim>>>(incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase.get(), cuda_step.get(), cuda_sim.get(),
+					run_simulation<<<grid_dim, block_dim>>>(incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
 															bd_size, time(NULL), std::min(MAX_GAME_TIME_9_9, timeLeft));
 // 					printf("run_simulation2 \n");
 				}
@@ -547,7 +547,7 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 	// for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
 	// 	free(args[ti].seq);
 	// }
-	free(tids);
+	// free(tids);
 	free(args);
 }
 
