@@ -387,7 +387,7 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 			double thread_sim = 0.0;
 			double thread_win = 0.0;
 
-#pragma omp parallel
+#pragma omp parallel num_threads(CPU_THREADS_NUM + 4)
 #pragma omp single
 			{
 				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
@@ -504,7 +504,7 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 			{
 				double win = 0.0;
 				double sim = 0.0;
-#pragma omp parallel
+#pragma omp parallel num_threads(CPU_THREADS_NUM + 4)
 #pragma omp single
 				{
 					for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
