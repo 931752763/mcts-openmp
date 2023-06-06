@@ -21,9 +21,9 @@ def write_excel(file, new_row):
         wb.save(file)
 
 def do_loop(cpu_threads_num, parallel_num):
-    print("mcts cpu_threads_num: {}, parallel_num: {}, mcts will execute 10 times in sequence".format(cpu_threads_num, parallel_num))
+    print("mcts cpu_threads_num: {}, parallel_num: {}, mcts will execute {} times in sequence".format(cpu_threads_num, parallel_num, loop_num))
     file = data_txt.format(branch, parallel_num, cpu_threads_num)
-    for j in range(20):
+    for j in range(loop_num):
         time1 = time.time()
         process = subprocess.Popen(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # process = subprocess.Popen(["ls /bing"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -38,14 +38,17 @@ def do_loop(cpu_threads_num, parallel_num):
         write_excel(file, new_row)
 
 
-# python auto_run.py -b {branch_list} -p {parallel_num} -c {cpu_threads_num_list}
+# python auto_run.py -b {branch_list} -l {loop_num} -p {parallel_num} -c {cpu_threads_num_list}
 branch_list = []
+loop_num = 20
 parallel_num_list = []
 cpu_threads_num_list = []
 opts,args = getopt.getopt(sys.argv[1:],'-b:-p:-c:')
 for opt_name,opt_value in opts:
     if opt_name in ('-b'):
         branch_list = opt_value.split(" ")
+    if opt_name in ('-l'):
+        loop_num = int(opt_value)
     if opt_name in ('-p'):
         parallel_num_list = list(map(int, opt_value.split(" ")))
     if opt_name in ('-c'):
