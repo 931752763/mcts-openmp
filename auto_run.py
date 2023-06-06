@@ -63,10 +63,6 @@ for branch in branch_list:
             print("check gcc version")
             process = subprocess.run(["gcc", "--version"], stdout=subprocess.PIPE)
             print(process.stdout)
-            if branch == "openmp":
-                omp_num_threads = cpu_threads_num + 2
-                os.environ['OMP_NUM_THREADS'] = str(omp_num_threads)
-                print("openmp OMP_NUM_THREADS = {}".format(omp_num_threads))
             
             file = data_txt.format(branch, parallel_num, cpu_threads_num)
             if not os.path.isfile(file):
