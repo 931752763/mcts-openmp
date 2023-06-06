@@ -114,7 +114,7 @@ __global__ void run_simulation(int incre, int total, int *iarray, int *jarray, i
 
 	curandState_t state;
 	curand_init(seed + index, 0, 0, &state);
-
+	
 	CudaBoard board(bd_size);
 
 	int id = index / incre;
@@ -184,7 +184,7 @@ void *run_simulation_thread(void *arg)
 	COLOR player;
 	clock_t start = clock();
 	CudaBoard *board;
-	srand(time(NULL));
+	srand(0);
 
 	while (true)
 	{
@@ -253,7 +253,7 @@ void *run_simulation_thread_cpu(void *arg)
 	a->win = 0.0;
 	COLOR player;
 	CudaBoard *board;
-	srand(time(NULL));
+	srand(0);
 
 	board = new CudaBoard(a->bd_size);
 	for (int i = 0; i < len; i++)
@@ -419,7 +419,7 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 					double timeLeft = maxTime - diff / MILLION;
 // 					printf("run_simulation1 \n");
 					run_simulation<<<grid_dim, block_dim>>>(incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
-															bd_size, time(NULL), std::min(MAX_GAME_TIME_9_9, timeLeft));
+															bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
 // 					printf("run_simulation2 \n");
 				}
 			}
