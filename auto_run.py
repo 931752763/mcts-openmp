@@ -43,7 +43,7 @@ branch_list = []
 loop_num = 20
 parallel_num_list = []
 cpu_threads_num_list = []
-opts,args = getopt.getopt(sys.argv[1:],'-b:-p:-c:')
+opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:')
 for opt_name,opt_value in opts:
     if opt_name in ('-b'):
         branch_list = opt_value.split(" ")
