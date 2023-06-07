@@ -418,6 +418,7 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 }
 
 void Mcts::run_iteration_cpu(TreeNode* node) {
+	// printf("run_iteration_cpu start \n");
 	std::stack<TreeNode*> S;
 	S.push(node);
 	pthread_t* tids = (pthread_t*)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
@@ -428,6 +429,7 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 
 	while (!S.empty()) {
 		count++;
+		// printf("run_iteration_cpu: count=%d \n", count);
 		TreeNode* f = S.top();
 		S.pop();
 		if (!f->is_expandable()) {
@@ -438,6 +440,7 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 			expand(f);
 
 			std::vector<TreeNode*> children = f->get_children();
+			// printf("run_iteration_cpu: children.size()=%d \n", children.size());
 			for (size_t i = 0; i < children.size(); i++) {
 				for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
 					args[ti].len = (children[i]->get_sequence()).size();
@@ -448,6 +451,7 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 					args[ti].tid = ti;
 					pthread_create(&tids[ti], NULL, run_simulation_thread_cpu, (void *)(&args[ti]));
 				}
+				// printf("run_iteration_cpu after create \n");
 
 				double win = 0.0;
 				double sim = 0.0;
@@ -456,9 +460,10 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 					sim += args[ti].sim;
 					win += args[ti].win;
 				}
+				// printf("run_iteration_cpu after join \n");
 
 				back_propagation(children[i], win, sim);
-
+				abort = true;
 				if (checkAbort())break;
 			}
 			if (checkAbort())break;
@@ -472,6 +477,7 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 	// }
 	free(tids);
 	free(args);
+	// printf("run_iteration_cpu finish \n");
 }
 
 void get_sequence(TreeNode* node, int* len, int* iarray, int*jarray) {
