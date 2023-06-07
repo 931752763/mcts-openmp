@@ -26,14 +26,13 @@
 #define MAX_GAME_TIME_9_9 1000.0
 #define MAX_GAME_TIME_11_11 4000.0
 
-#define STEP_INDEX_STOP 10
-#define MAX_COUNT 10
-#define MAX_INDEX 5
-
 static int grid_dim = 2048;
 static int block_dim = 1;
 static int THREADS_NUM = grid_dim * block_dim;
+
 static int CPU_THREADS_NUM = 59;
+static int MAX_COUNT = 10;
+static int MAX_INDEX = 5;
 
 bool checkAbort();
 __device__ bool checkAbortCuda(long long int elapse, double timeLeft);
@@ -46,8 +45,10 @@ void get_sequence(TreeNode *node, int *len, int *iarray, int *jarray);
 
 void memoryUsage();
 
-Point Mcts::run(int cpu_threads_num) {
+Point Mcts::run(int cpu_threads_num, int max_count, int max_index) {
     CPU_THREADS_NUM = cpu_threads_num;
+	MAX_COUNT = max_count;
+	MAX_INDEX = max_index;
     printf("CPU_THREADS_NUM %d\n", CPU_THREADS_NUM);
 	clock_gettime(CLOCK_REALTIME, &start);
 	size_t heapszie = 256 * 1024 * 1024;
@@ -146,10 +147,10 @@ __global__ void run_simulation(int incre, int total, int *iarray, int *jarray, i
 		// 	abort = true;
 		// 	break;
 		// }
-		if (step[index] >= STEP_INDEX_STOP){
-			abort = true;
-			break;
-		}
+		// if (step[index] >= STEP_INDEX_STOP){
+		// 	abort = true;
+		// 	break;
+		// }
 		step[index]++;
 	}
 

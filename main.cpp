@@ -10,6 +10,8 @@
 
 int main(int argc, char *argv[]) {
     int cpu_threads_num = atoi(argv[1]);
+	int max_count = atoi(argv[2]);
+	int max_index = atoi(argv[3]);
 
     int bd_size = 9;
 	Mcts* cpu;
@@ -26,7 +28,7 @@ int main(int argc, char *argv[]) {
 	while (step < NUM_MOVES) {
 		gpu = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
-		p = gpu->run(cpu_threads_num);
+		p = gpu->run(cpu_threads_num, max_count, max_index);
 		end = clock();
 		gpu_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;
@@ -45,7 +47,7 @@ int main(int argc, char *argv[]) {
 
 		cpu = new Mcts(CPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
-		p = cpu->run(cpu_threads_num);
+		p = cpu->run(cpu_threads_num, max_count, max_index);
 		end = clock();
 		cpu_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;
