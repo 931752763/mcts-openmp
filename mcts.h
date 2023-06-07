@@ -85,7 +85,7 @@ private:
 	bool abort; 
 	int bd_size;
 	MODE mode;
-	int count = 0;
+	int count ;
 
 public:
 	Mcts(MODE m, int size, double time) {
@@ -94,6 +94,7 @@ public:
 		root = new TreeNode(seq);
 		maxTime = time;
 		mode = m;
+		count = 0;
 	}
 
 	Mcts(MODE m, int size, double time, std::vector<Point> seq) {
@@ -101,6 +102,7 @@ public:
 		root = new TreeNode(seq);
 		maxTime = time;
 		mode = m;
+		count = 0;
 	}
 
 	~Mcts() {

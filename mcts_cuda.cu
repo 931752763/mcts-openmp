@@ -53,8 +53,8 @@ Point Mcts::run(int cpu_threads_num) {
 	size_t heapszie = 256 * 1024 * 1024;
 	cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
 
-	while (true)
-	{
+	// while (true)
+	// {
 		if (mode == GPU)
 		{
 			run_iteration_gpu(root);
@@ -64,9 +64,9 @@ Point Mcts::run(int cpu_threads_num) {
 			run_iteration_cpu(root);
 		}
 
-		if (checkAbort())
-			break;
-	}
+	// 	if (checkAbort())
+	// 		break;
+	// }
 	double maxv = -1.0;
 	TreeNode *best = NULL;
 	std::vector<TreeNode *> children = root->get_children();
@@ -254,7 +254,7 @@ void *run_simulation_thread(void *arg)
 
 void *run_simulation_thread_cpu(void *arg)
 {
-// 	printf("run_simulation_thread_cpu ttid: %ld\n", syscall(SYS_gettid));
+	// printf("run_simulation_thread_cpu ttid: %ld\n", syscall(SYS_gettid));
 	thread_arg *a = static_cast<thread_arg *>(arg);
 	int len = a->len;
 	int cur_step = 0;
@@ -362,6 +362,8 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 
 	while (!S.empty()) {
 		count++;
+		printf("stack size: %d \n", S.size());
+		printf("count: %d \n", count);
 		TreeNode* f = S.top();
 		S.pop();
 		if (!f->is_expandable())
@@ -435,7 +437,7 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 				}
 			}
 
-#pragma omp taskwait
+// #pragma omp taskwait
 // 			printf("gpu: back_propagation \n");
 			for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 			{
@@ -487,6 +489,7 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 
 void Mcts::run_iteration_cpu(TreeNode *node)
 {
+	printf("run_iteration_cpu start\n");
 	std::stack<TreeNode *> S;
 	S.push(node);
 	// pthread_t *tids = (pthread_t *)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
@@ -496,9 +499,10 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 		args[ti].seq = (Point *)malloc(sizeof(Point) * 300);
 	}
 
-
 	while (!S.empty()) {
 		count++;
+		printf("stack size: %d \n", S.size());
+		printf("count: %d \n", count);
 		TreeNode* f = S.top();
 		S.pop();
 		if (!f->is_expandable())
@@ -535,7 +539,7 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 						}
 					}
 				}
-#pragma omp taskwait
+// #pragma omp taskwait
 				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 				{
 					// pthread_join(tids[ti], NULL);
