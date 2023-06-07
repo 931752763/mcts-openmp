@@ -25,7 +25,7 @@ def do_loop(cpu_threads_num, parallel_num):
     file = data_txt.format(branch, parallel_num, cpu_threads_num)
     for j in range(loop_num):
         time1 = time.time()
-        process = subprocess.Popen(["./hybrid2", str(cpu_threads_num)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(["./hybrid2", str(cpu_threads_num), "10", "10"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # process = subprocess.Popen(["ls /bing"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         res = process.communicate()
         # print(res)
