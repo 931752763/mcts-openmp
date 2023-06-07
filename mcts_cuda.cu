@@ -489,7 +489,7 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 
 void Mcts::run_iteration_cpu(TreeNode *node)
 {
-	printf("run_iteration_cpu start\n");
+	// printf("run_iteration_cpu start\n");
 	std::stack<TreeNode *> S;
 	S.push(node);
 	// pthread_t *tids = (pthread_t *)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
@@ -548,7 +548,7 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 				}
 // 				printf("back_propagation \n");
 				back_propagation(children[i], win, sim);
-
+				abort = true;
 				if (checkAbort())
 					break;
 			}
