@@ -3,6 +3,7 @@
 #include "mcts.h"
 #include "point.h"
 #include <stdlib.h>
+#include <time.h>
 
 #define NUM_MOVES 120
 #define TIME_EACH_MOVE 2*60*1000 // ms
@@ -19,9 +20,15 @@ int main(int argc, char *argv[]) {
 	int step = 0;
 	std::vector<Point> seq;
 	printf("hybrid start. gpu first\n");
+	clock_t start, end;
+	double gpu_time = 0.0;
+	double cpu_time = 0.0;
 	while (step < NUM_MOVES) {
 		gpu = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
+		start = clock();
 		p = gpu->run(cpu_threads_num);
+		end = clock();
+		gpu_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;
 		printf("gpu : (%d,%d)\n", p.i, p.j);
 		seq.push_back(p);
@@ -37,7 +44,10 @@ int main(int argc, char *argv[]) {
 		// board.print_board();
 
 		cpu = new Mcts(CPU, bd_size, TIME_EACH_MOVE, seq);
+		start = clock();
 		p = cpu->run(cpu_threads_num);
+		end = clock();
+		cpu_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;
 		seq.push_back(p);
 		printf("cpu : (%d,%d)\n", p.i, p.j);
@@ -48,5 +58,7 @@ int main(int argc, char *argv[]) {
 		delete gpu;
 	}
 	printf("score:%d\n", board.score());
+	printf("gpu time: %lf \n", gpu_time);
+	printf("cpu time: %lf \n", cpu_time);
 }
 

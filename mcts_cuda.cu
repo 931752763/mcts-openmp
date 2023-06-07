@@ -26,6 +26,9 @@
 #define MAX_GAME_TIME_9_9 1000.0
 #define MAX_GAME_TIME_11_11 4000.0
 
+#define STEP_INDEX_STOP 10
+#define MAX_COUNT 10
+#define MAX_INDEX 5
 
 static int grid_dim = 2048;
 static int block_dim = 1;
@@ -143,7 +146,7 @@ __global__ void run_simulation(int incre, int total, int *iarray, int *jarray, i
 		// 	abort = true;
 		// 	break;
 		// }
-		if (step[index] >= 10){
+		if (step[index] >= STEP_INDEX_STOP){
 			abort = true;
 			break;
 		}
@@ -190,7 +193,7 @@ void *run_simulation_thread(void *arg)
 	srand (0);
 	
 	// while (true) {
-	for(int i=0; i<=10; i++){
+	for(int index = 0; index <= MAX_INDEX; index++){
 		board =  new CudaBoard(a->bd_size);
 		for (int i = 0; i < len; i++) {
 			board->update_board(a->seq[i]);
@@ -211,11 +214,14 @@ void *run_simulation_thread(void *arg)
 			// 	abort = true;
 			// 	break;
 			// }
-			if (cur_step >= 10){
-				abort = true;
-				break;
-			}
+			// if (index*cur_step >= STEP_INDEX_STOP){
+			// 	abort = true;
+			// 	break;
+			// }
 			cur_step++;
+		}
+		if (index == MAX_INDEX){
+			abort = true;
 		}
 
 		int score = board->score();
@@ -581,7 +587,7 @@ bool Mcts::checkAbort() {
 	// 	diff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
 	// 	abort = diff / MILLION > maxTime;
 	// }
-	if (count >= 10){
+	if (count >= MAX_COUNT){
 		abort = true;
 	}
 	return abort;
