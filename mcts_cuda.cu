@@ -116,6 +116,7 @@ __global__ void run_simulation(int incre, int total, int* iarray, int* jarray, i
 	COLOR player = board.ToPlay();
 
 	while (step[index] < MAX_STEP) {
+		// printf("step[index] %d", step[index]);
 		Point move = board.get_next_moves_device(0.5);
 		if (move.i < 0) {
 			break;
@@ -302,6 +303,7 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 	}
 
 	while (!S.empty()) {
+		count++;
 		TreeNode* f = S.top();
 		S.pop();
 		if (!f->is_expandable()) {
@@ -371,7 +373,6 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 				back_propagation(children[children_index], thread_win, thread_sim);
 				children_index = (children_index + 1) % csize;
 			}
-
 
 			// cudaMemcpy(win_increase, cuda_win_increase.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 			// cudaMemcpy(step_increase, cuda_step.get(), sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
