@@ -51,15 +51,15 @@ Point Mcts::run(int cpu_threads_num) {
 	size_t heapszie = 256 * 1024 * 1024;
 	cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
 
-	while (true) {
+	// while (true) {
 		if (mode == GPU) {
 			run_iteration_gpu(root);
 		} else if (mode == CPU) {
 			run_iteration_cpu(root);
 		}
 
-		if (checkAbort()) break;
-	}
+	// 	if (checkAbort()) break;
+	// }
 	double maxv = -1.0;
 	TreeNode* best = NULL;
 	std::vector<TreeNode*> children = root->get_children();
