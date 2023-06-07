@@ -66,6 +66,7 @@ __device__  __host__ bool CudaBoard::isSuicide(int i, int j, COLOR color) {
 }
 
 __device__  Point CudaBoard::get_next_moves_device(double seed) {
+	// printf("get_next_moves_device %lf \n", seed);
 	COLOR color = player;
 	int step = seed * remain;
 	int current = 0;

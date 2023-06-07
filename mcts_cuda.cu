@@ -99,8 +99,8 @@ __global__ void run_simulation(int incre, int total, int* iarray, int* jarray, i
 	sim[index] = 0;
 	bool abort = false;
 
-	curandState_t state;
-	curand_init(seed + index, 0, 0, &state);
+	// curandState_t state;
+	// curand_init(seed + index, 0, 0, &state);
 
 	CudaBoard board(bd_size);
 
@@ -116,12 +116,16 @@ __global__ void run_simulation(int incre, int total, int* iarray, int* jarray, i
 	COLOR player = board.ToPlay();
 
 	while (step[index] < MAX_STEP) {
-		Point move = board.get_next_moves_device(curand_uniform(&state));
+		Point move = board.get_next_moves_device(0.5);
 		if (move.i < 0) {
 			break;
 		}
 		board.update_board(move);
-		if ((clock64() - start_game) / CLOCK_RATE > time) {
+		// if ((clock64() - start_game) / CLOCK_RATE > time) {
+		// 	abort = true;
+		// 	break;
+		// }
+		if (step[index] >= 10){
 			abort = true;
 			break;
 		}
@@ -156,15 +160,16 @@ void* run_simulation_thread(void *arg) {
 	COLOR player;
 	clock_t start = clock();
 	CudaBoard* board;
-	srand (time(NULL));
-
-	while (true) {
+	srand (0);
+	
+	// while (true) {
+	for(int i=0; i<=10; i++){
 		board =  new CudaBoard(a->bd_size);
 		for (int i = 0; i < len; i++) {
 			board->update_board(a->seq[i]);
 		}
 		player = board->ToPlay();
-		if ((1000.0 * (clock() - start) / CLOCKS_PER_SEC) > timeLeft) break;
+		// if ((1000.0 * (clock() - start) / CLOCKS_PER_SEC) > timeLeft) break;
 
 		cur_step = 0;
 		while (cur_step < MAX_STEP) {
@@ -173,7 +178,11 @@ void* run_simulation_thread(void *arg) {
 				break;
 			}
 			board->update_board(moves[rand() % moves.size()]);
-			if ((1000.0 * (clock() - start) / CLOCKS_PER_SEC) > timeLeft) {
+			// if ((1000.0 * (clock() - start) / CLOCKS_PER_SEC) > timeLeft) {
+			// 	abort = true;
+			// 	break;
+			// }
+			if (cur_step >= 10){
 				abort = true;
 				break;
 			}
@@ -195,7 +204,7 @@ void* run_simulation_thread(void *arg) {
 		} else {
 			a->sim += 1.0;
 		}
-		if ((MAX_GAME_TIME_9_9 * (clock() - start) / CLOCKS_PER_SEC) > timeLeft) break;
+		// if ((MAX_GAME_TIME_9_9 * (clock() - start) / CLOCKS_PER_SEC) > timeLeft) break;
 		delete board;
 	}
 	return;
@@ -209,7 +218,7 @@ void* run_simulation_thread_cpu(void *arg) {
 	a->win = 0.0;
 	COLOR player;
 	CudaBoard* board;
-	srand (time(NULL));
+	srand (0);
 
 	board =  new CudaBoard(a->bd_size);
 	for (int i = 0; i < len; i++) {
@@ -269,7 +278,7 @@ void Mcts::expand(TreeNode* node) {
 void Mcts::run_iteration_gpu(TreeNode* node) {
 	std::stack<TreeNode*> S;
 	S.push(node);
-    printf("bd_size: %d", bd_size);
+    // printf("bd_size: %d", bd_size);
 	int total = bd_size * bd_size;
 	int* c_i = new int[total * total];
 	int* c_j = new int[total * total];
@@ -348,7 +357,7 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 			// run_simulation <<< grid_dim, block_dim >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase.get(), cuda_step.get(), cuda_sim.get(),
 			//         bd_size, time(NULL), std::min(MAX_GAME_TIME_9_9, timeLeft));
 			run_simulation <<< grid_dim, block_dim >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
-			        bd_size, time(NULL), std::min(MAX_GAME_TIME_9_9, timeLeft));
+			        bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
 
 
 			// collect cpu thread data
@@ -411,6 +420,7 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 	}
 
 	while (!S.empty()) {
+		count++;
 		TreeNode* f = S.top();
 		S.pop();
 		if (!f->is_expandable()) {
@@ -472,11 +482,14 @@ void get_sequence(TreeNode* node, int* len, int* iarray, int*jarray) {
 }
 
 bool Mcts::checkAbort() {
-	if (!abort) {
-		uint64_t diff;
-		clock_gettime(CLOCK_REALTIME, &end);
-		diff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
-		abort = diff / MILLION > maxTime;
+	// if (!abort) {
+	// 	uint64_t diff;
+	// 	clock_gettime(CLOCK_REALTIME, &end);
+	// 	diff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+	// 	abort = diff / MILLION > maxTime;
+	// }
+	if (count >= 10){
+		abort = true;
 	}
 	return abort;
 }

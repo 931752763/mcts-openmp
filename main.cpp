@@ -12,20 +12,30 @@ int main(int argc, char *argv[]) {
 
     int bd_size = 9;
 	Mcts* cpu;
-	Mcts* gpu;
+	Mcts* cpu0;
+	// Mcts* gpu;
 	Point p;
 	CudaBoard board(bd_size);
 	int step = 0;
 	std::vector<Point> seq;
 	printf("hybrid start. gpu first\n");
 	while (step < NUM_MOVES) {
-		gpu = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
-		p = gpu->run(cpu_threads_num);
+		// gpu = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
+		// p = gpu->run(cpu_threads_num);
+		// step++;
+		// printf("gpu : (%d,%d)\n", p.i, p.j);
+		// seq.push_back(p);
+		// board.update_board(p);
+		// board.print_board();
+
+		cpu0 = new Mcts(CPU, bd_size, TIME_EACH_MOVE, seq);
+		p = cpu0->run(cpu_threads_num);
 		step++;
-		printf("gpu : (%d,%d)\n", p.i, p.j);
 		seq.push_back(p);
+		printf("cpu : (%d,%d)\n", p.i, p.j);
 		board.update_board(p);
 		board.print_board();
+
 		cpu = new Mcts(CPU, bd_size, TIME_EACH_MOVE, seq);
 		p = cpu->run(cpu_threads_num);
 		step++;
@@ -34,7 +44,8 @@ int main(int argc, char *argv[]) {
 		board.update_board(p);
 		board.print_board();
 		delete cpu;
-		delete gpu;
+		delete cpu0;
+		// delete gpu;
 	}
 	printf("score:%d\n", board.score());
 }
