@@ -343,9 +343,6 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 				children_index = (children_index + 1) % csize;
 			}
 
-			// thrust::device_ptr<double> cuda_win_increase = thrust::device_malloc<double>(THREADS_NUM);
-			// thrust::device_ptr<double> cuda_sim = thrust::device_malloc<double>(THREADS_NUM);
-			// thrust::device_ptr<int> cuda_step = thrust::device_malloc<int>(THREADS_NUM);
 			double* cuda_win_increase;
 			double* cuda_sim;
 			int* cuda_step;
@@ -381,9 +378,6 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 				children_index = (children_index + 1) % csize;
 			}
 
-			// cudaMemcpy(win_increase, cuda_win_increase.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			// cudaMemcpy(step_increase, cuda_step.get(), sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			// cudaMemcpy(sim_increase, cuda_sim.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 			cudaMemcpy(win_increase, cuda_win_increase, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 			cudaMemcpy(step_increase, cuda_step, sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
 			cudaMemcpy(sim_increase, cuda_sim, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
@@ -398,9 +392,6 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 			}
 			update(f, win_increase, sim_increase, incre, THREADS_NUM);
 
-			// thrust::device_free(cuda_win_increase);
-			// thrust::device_free(cuda_step);
-			// thrust::device_free(cuda_sim);
 			cudaFree(cuda_win_increase);
 			cudaFree(cuda_step);
 			cudaFree(cuda_sim);
