@@ -38,12 +38,13 @@ def do_loop(cpu_threads_num, parallel_num):
         write_excel(file, new_row)
 
 
-# python auto_run.py -b {branch_list} -l {loop_num} -p {parallel_num} -c {cpu_threads_num_list}
+# python auto_run.py -b {branch_list} -l {loop_num} -p {parallel_num} -c {cpu_threads_num_list} -o {omp_num_threads_list}
 branch_list = []
 loop_num = 20
 parallel_num_list = []
 cpu_threads_num_list = []
-opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:')
+omp_num_threads_list = []
+opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:-o:')
 for opt_name,opt_value in opts:
     if opt_name in ('-b'):
         branch_list = opt_value.split(" ")
@@ -53,41 +54,45 @@ for opt_name,opt_value in opts:
         parallel_num_list = list(map(int, opt_value.split(" ")))
     if opt_name in ('-c'):
         cpu_threads_num_list = list(map(int, opt_value.split(" ")))
+    if opt_name in ('-o'):
+        omp_num_threads_list = list(map(int, opt_value.split(" ")))
 
 
 for branch in branch_list:
     os.system("git checkout " + branch)
     os.system("make")
     print("parallel_num_list: {}, cpu_threads_num_list: {}".format(parallel_num_list, cpu_threads_num_list))
-    data_txt = "../data/{}_{}_{}.xlsx"
+    data_txt = "../data/{}_{}_threads={}_pool={}.xlsx"
 
     for cpu_threads_num in cpu_threads_num_list:
         for parallel_num in parallel_num_list:
-            print("check gcc version")
-            process = subprocess.run(["gcc", "--version"], stdout=subprocess.PIPE)
-            print(process.stdout)
-            
-            file = data_txt.format(branch, parallel_num, cpu_threads_num)
-            if not os.path.isfile(file):
-                create_excel(file)
-            
-            begin = time.time()
-            begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
-            t = []
-            lock = threading.Lock()
-            for i in range(parallel_num):
-                ti = threading.Thread(target=do_loop, args=(cpu_threads_num, parallel_num, ))
-                t.append(ti)
-                ti.start()
+            for omp_num_threads in omp_num_threads_list:
+                os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
+                print("check gcc version")
+                process = subprocess.run(["gcc", "--version"], stdout=subprocess.PIPE)
+                print(process.stdout)
+                
+                file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
+                if not os.path.isfile(file):
+                    create_excel(file)
+                
+                begin = time.time()
+                begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
+                t = []
+                lock = threading.Lock()
+                for i in range(parallel_num):
+                    ti = threading.Thread(target=do_loop, args=(cpu_threads_num, parallel_num, ))
+                    t.append(ti)
+                    ti.start()
 
-            for i in range(parallel_num):
-                t[i].join()
+                for i in range(parallel_num):
+                    t[i].join()
 
-            end = time.time()
-            end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
-            new_row = [begin_str, end_str]
-            write_excel(file, new_row)
-            s = "total {}".format((end - begin))
-            print(s)
-            # print("sleep 5 min to seperate")
-            # time.sleep(300)
+                end = time.time()
+                end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
+                new_row = [begin_str, end_str]
+                write_excel(file, new_row)
+                s = "total {}".format((end - begin))
+                print(s)
+                # print("sleep 5 min to seperate")
+                # time.sleep(300)
