@@ -435,6 +435,23 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 					run_simulation<<<grid_dim, block_dim>>>(incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
 															bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
 // 					printf("run_simulation2 \n");
+
+					cudaMemcpy(win_increase, cuda_win_increase, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+					cudaMemcpy(step_increase, cuda_step, sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
+					cudaMemcpy(sim_increase, cuda_sim, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+
+					double total_sim = 0.0;
+					double total_win = 0.0;
+					int total_step = 0;
+					for (int i = 0; i < THREADS_NUM; i++)
+					{
+						total_sim += sim_increase[i];
+						total_win += win_increase[i];
+						total_step += step_increase[i];
+					}
+					cudaFree(cuda_win_increase);
+					cudaFree(cuda_step);
+					cudaFree(cuda_sim);
 				}
 			}
 
@@ -448,31 +465,8 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 				back_propagation(children[children_index], thread_win, thread_sim);
 				children_index = (children_index + 1) % csize;
 			}
-
-			// cudaMemcpy(win_increase, cuda_win_increase.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			// cudaMemcpy(step_increase, cuda_step.get(), sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			// cudaMemcpy(sim_increase, cuda_sim.get(), sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			cudaMemcpy(win_increase, cuda_win_increase, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			cudaMemcpy(step_increase, cuda_step, sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
-			cudaMemcpy(sim_increase, cuda_sim, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
-
-			double total_sim = 0.0;
-			double total_win = 0.0;
-			int total_step = 0;
-			for (int i = 0; i < THREADS_NUM; i++)
-			{
-				total_sim += sim_increase[i];
-				total_win += win_increase[i];
-				total_step += step_increase[i];
-			}
+			
 			update(f, win_increase, sim_increase, incre, THREADS_NUM);
-
-			// thrust::device_free(cuda_win_increase);
-			// thrust::device_free(cuda_step);
-			// thrust::device_free(cuda_sim);
-			cudaFree(cuda_win_increase);
-			cudaFree(cuda_step);
-			cudaFree(cuda_sim);
 
 			if (checkAbort())break;
 		}
