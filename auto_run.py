@@ -9,7 +9,7 @@ from openpyxl import Workbook, load_workbook
 def create_excel(file):
     wb = Workbook()
     ws = wb.active
-    title = ["thread_id", "time (s)"]
+    title = ["branch", "parallel_num", "cpu_threads_num", "omp_num_threads", "thread_id", "time (s)", "error_flag"]
     ws.append(title)
     wb.save(file)
 
@@ -20,31 +20,33 @@ def write_excel(file, new_row):
         ws.append(new_row)
         wb.save(file)
 
-def do_loop(cpu_threads_num, parallel_num):
-    print("mcts cpu_threads_num: {}, parallel_num: {}, mcts will execute {} times in sequence".format(cpu_threads_num, parallel_num, loop_num))
-    file = data_txt.format(branch, parallel_num, cpu_threads_num)
+def do_loop():
+    print("mcts cpu_threads_num: {}, parallel_num: {}, omp_num_threads: {}, mcts will execute {} times in sequence".
+          format(cpu_threads_num, parallel_num, omp_num_threads, loop_num))
+    # file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
     for j in range(loop_num):
         time1 = time.time()
         process = subprocess.Popen(["./hybrid2", str(cpu_threads_num), "10", "10"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # process = subprocess.Popen(["ls /bing"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # process = subprocess.Popen(["ls /bin"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         res = process.communicate()
         # print(res)
         time2 = time.time()
+        new_row = [branch, parallel_num, cpu_threads_num, omp_num_threads, process.pid, (time2 - time1)]
         if process.returncode != 0:
-            new_row = ["{}-error".format(process.pid), (time2 - time1)]
-        else:
-            new_row = [process.pid, (time2 - time1)]
+            new_row.append("error")
+        
         print(new_row)
         write_excel(file, new_row)
 
 
-# python auto_run.py -b {branch_list} -l {loop_num} -p {parallel_num} -c {cpu_threads_num_list} -o {omp_num_threads_list}
+# python auto_run.py -b {branch_list} -l {loop_num} -p {parallel_num} -c {cpu_threads_num_list} -o {omp_num_threads_list} -f {file_name}
 branch_list = []
 loop_num = 20
 parallel_num_list = []
 cpu_threads_num_list = []
 omp_num_threads_list = []
-opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:-o:')
+file = "../data/test.xlsx"
+opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:-o:-f:')
 for opt_name,opt_value in opts:
     if opt_name in ('-b'):
         branch_list = opt_value.split(" ")
@@ -56,13 +58,14 @@ for opt_name,opt_value in opts:
         cpu_threads_num_list = list(map(int, opt_value.split(" ")))
     if opt_name in ('-o'):
         omp_num_threads_list = list(map(int, opt_value.split(" ")))
-
+    if opt_name in ('-f'):
+        file = "../data/{}.xlsx".format(opt_value)
 
 for branch in branch_list:
     os.system("git checkout " + branch)
     os.system("make")
     print("parallel_num_list: {}, cpu_threads_num_list: {}".format(parallel_num_list, cpu_threads_num_list))
-    data_txt = "../data/{}_{}_threads={}_pool={}.xlsx"
+    # data_txt = "../data/{}_{}_threads={}_pool={}.xlsx"
 
     for cpu_threads_num in cpu_threads_num_list:
         for parallel_num in parallel_num_list:
@@ -72,7 +75,7 @@ for branch in branch_list:
                 process = subprocess.run(["gcc", "--version"], stdout=subprocess.PIPE)
                 print(process.stdout)
                 
-                file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
+                # file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
                 if not os.path.isfile(file):
                     create_excel(file)
                 
@@ -81,7 +84,7 @@ for branch in branch_list:
                 t = []
                 lock = threading.Lock()
                 for i in range(parallel_num):
-                    ti = threading.Thread(target=do_loop, args=(cpu_threads_num, parallel_num, ))
+                    ti = threading.Thread(target=do_loop)
                     t.append(ti)
                     ti.start()
 
