@@ -51,7 +51,7 @@ def run():
     begin = time.time()
     begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
     t = []
-    lock = threading.Lock()
+    
     for i in range(parallel_num):
         ti = threading.Thread(target=do_loop)
         t.append(ti)
@@ -91,6 +91,7 @@ for opt_name,opt_value in opts:
     if opt_name in ('-f'):
         file = "../data/{}.xlsx".format(opt_value)
 
+lock = threading.Lock()
 for branch in branch_list:
     os.system("git checkout " + branch)
     os.system("make")
