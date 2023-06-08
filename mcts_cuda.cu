@@ -438,7 +438,7 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 				}
 			}
 
-// #pragma omp taskwait
+#pragma omp taskwait
 // 			printf("gpu: back_propagation \n");
 			for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 			{
@@ -540,7 +540,7 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 						}
 					}
 				}
-// #pragma omp taskwait
+#pragma omp taskwait
 				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 				{
 					// pthread_join(tids[ti], NULL);
