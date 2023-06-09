@@ -21,12 +21,12 @@ def write_excel(file, new_row):
         wb.save(file)
 
 def do_loop():
-    print("mcts cpu_threads_num: {}, parallel_num: {}, omp_num_threads: {}, mcts will execute {} times in sequence".
-          format(cpu_threads_num, parallel_num, omp_num_threads, loop_num))
+    print("branch {}, parallel_num {}, cpu_threads_num {}, omp_num_threads {}, loop_num {}".
+          format(branch, parallel_num, cpu_threads_num, omp_num_threads, loop_num))
     # file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
     for j in range(loop_num):
         time1 = time.time()
-        process = subprocess.Popen(["./hybrid2", str(cpu_threads_num), "10", "10"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(["./hybrid2", str(cpu_threads_num), "10", "500"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # process = subprocess.Popen(["ls /bin"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         res = process.communicate()
         # print(res)
@@ -100,12 +100,16 @@ for branch in branch_list:
     if "pthread" in branch:
         for parallel_num in parallel_num_list:
             for cpu_threads_num in cpu_threads_num_list:
-                omp_num_threads = cpu_threads_num
+                omp_num_threads = 0
                 run()
                 
     if "openmp" in branch:
         for parallel_num in parallel_num_list:
-            for omp_num_threads in omp_num_threads_list:
-                cpu_threads_num = omp_num_threads
-                run()
+            for cpu_threads_num in cpu_threads_num_list:
+                for omp_num_threads in omp_num_threads_list:
+                    print("cpu_threads_num {}, omp_num_threads{}".format(cpu_threads_num, omp_num_threads))
+                    if cpu_threads_num < omp_num_threads:
+                        continue
+                    omp_num_threads += 2
+                    run()
                 
