@@ -406,7 +406,7 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 			{
 				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 				{
-#pragma omp task
+#pragma omp task depend(out: args[ti])
 					{
 						args[ti].len = (children[children_index]->get_sequence()).size();
 						for (int pi = 0; pi < args[ti].len; pi++)
@@ -456,17 +456,19 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 					cudaFree(cuda_sim);
 					// printf("after cudaFree \n");
 				}
-			}
 
-#pragma omp taskwait
-// 			printf("gpu: back_propagation \n");
-			for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
-			{
-				// pthread_join(tids[ti], NULL);
-				thread_sim += args[ti].sim;
-				thread_win += args[ti].win;
-				back_propagation(children[children_index], thread_win, thread_sim);
-				children_index = (children_index + 1) % csize;
+	// 			printf("gpu: back_propagation \n");
+				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
+				{
+#pragma omp task depend(in: args[ti])
+					{
+						// pthread_join(tids[ti], NULL);
+						thread_sim += args[ti].sim;
+						thread_win += args[ti].win;
+						back_propagation(children[children_index], thread_win, thread_sim);
+						children_index = (children_index + 1) % csize;
+					}
+				}
 			}
 			
 			update(f, win_increase, sim_increase, incre, THREADS_NUM);
@@ -523,7 +525,7 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 				{
 					for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 					{
-#pragma omp task
+#pragma omp task depend(out: args[ti])
 						{
 							args[ti].len = (children[i]->get_sequence()).size();
 							for (int pi = 0; pi < args[ti].len; pi++)
@@ -536,13 +538,17 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 							run_simulation_thread_cpu((void *)&args[ti]);
 						}
 					}
-				}
-#pragma omp taskwait
-				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
-				{
-					// pthread_join(tids[ti], NULL);
-					sim += args[ti].sim;
-					win += args[ti].win;
+				
+
+					for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
+					{
+#pragma omp task depend(out: args[ti])
+						{
+							// pthread_join(tids[ti], NULL);
+							sim += args[ti].sim;
+							win += args[ti].win;
+						}
+					}
 				}
 // 				printf("back_propagation \n");
 				back_propagation(children[i], win, sim);
