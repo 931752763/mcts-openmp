@@ -431,15 +431,16 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 					clock_gettime(CLOCK_REALTIME, &end);
 					diff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
 					double timeLeft = maxTime - diff / MILLION;
-// 					printf("run_simulation1 \n");
+					// printf("run_simulation1 \n");
 					run_simulation<<<grid_dim, block_dim>>>(incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
 															bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
-// 					printf("run_simulation2 \n");
+					// printf("run_simulation2 \n");
 
+					// block method
 					cudaMemcpy(win_increase, cuda_win_increase, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 					cudaMemcpy(step_increase, cuda_step, sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
 					cudaMemcpy(sim_increase, cuda_sim, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
-
+					// printf("after cudaMemcpy \n");
 					double total_sim = 0.0;
 					double total_win = 0.0;
 					int total_step = 0;
@@ -449,9 +450,11 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 						total_win += win_increase[i];
 						total_step += step_increase[i];
 					}
+					// printf("after add \n");
 					cudaFree(cuda_win_increase);
 					cudaFree(cuda_step);
 					cudaFree(cuda_sim);
+					// printf("after cudaFree \n");
 				}
 			}
 
