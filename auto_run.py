@@ -9,7 +9,7 @@ from openpyxl import Workbook, load_workbook
 def create_excel(file):
     wb = Workbook()
     ws = wb.active
-    title = ["branch", "parallel_num", "cpu_threads_num", "omp_num_threads", "thread_id", "time (s)", "error_flag"]
+    title = ["branch", "parallel_num", "cpu_threads_num", "omp_num_threads", "thread_id", "time (s)", "error_flag", "start_time", "end_time"]
     ws.append(title)
     wb.save(file)
 
@@ -21,20 +21,25 @@ def write_excel(file, new_row):
         wb.save(file)
 
 def do_loop():
-    print("branch {}, parallel_num {}, cpu_threads_num {}, omp_num_threads {}, loop_num {}".
-          format(branch, parallel_num, cpu_threads_num, omp_num_threads, loop_num))
+    print("branch {}, parallel_num {}, cpu_threads_num {}, omp_num_threads {}, loop_num {}, board size {}".
+          format(branch, parallel_num, cpu_threads_num, omp_num_threads, loop_num, bd_size))
     # file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
     for j in range(loop_num):
-        time1 = time.time()
-        process = subprocess.Popen(["./hybrid2", str(cpu_threads_num), "10", "200"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        begin = time.time()
+        begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
+        process = subprocess.Popen(["./hybrid2", "-n", str(cpu_threads_num), "-s", str(bd_size), "-c 10", "-i 10", "-m 10"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # process = subprocess.Popen(["ls /bin"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         res = process.communicate()
         # print(res)
-        time2 = time.time()
-        new_row = [branch, parallel_num, cpu_threads_num, omp_num_threads, process.pid, (time2 - time1)]
+        end = time.time()
+        end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
+        new_row = [branch, parallel_num, cpu_threads_num, omp_num_threads, process.pid, (end - begin)]
         if process.returncode != 0:
             new_row.append("error")
-        
+        else:
+            new_row.append("ok")
+        new_row.append(begin_str)
+        new_row.append(end_str)
         print(new_row)
         write_excel(file, new_row)
 
@@ -48,10 +53,7 @@ def run():
     if not os.path.isfile(file):
         create_excel(file)
     
-    begin = time.time()
-    begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
     t = []
-    
     for i in range(parallel_num):
         ti = threading.Thread(target=do_loop)
         t.append(ti)
@@ -59,24 +61,19 @@ def run():
 
     for i in range(parallel_num):
         t[i].join()
-
-    end = time.time()
-    end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
-    new_row = [begin_str, end_str]
-    write_excel(file, new_row)
-    s = "total {}".format((end - begin))
-    print(s)
+        
     # print("sleep 5 min to seperate")
     # time.sleep(300)
 
-# python auto_run.py -b {branch_list} -l {loop_num} -p {parallel_num} -c {cpu_threads_num_list} -o {omp_num_threads_list} -f {file_name}
+# python auto_run.py -b {branch_list} -l {loop_num} -p {parallel_num} -c {cpu_threads_num_list} -o {omp_num_threads_list} -s {board_size_list} -f {file_name}
 branch_list = []
 loop_num = 20
 parallel_num_list = []
 cpu_threads_num_list = []
 omp_num_threads_list = []
+board_size_list = []
 file = "../data/test.xlsx"
-opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:-o:-f:')
+opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:-o:-s:-f:')
 for opt_name,opt_value in opts:
     if opt_name in ('-b'):
         branch_list = opt_value.split(" ")
@@ -88,6 +85,8 @@ for opt_name,opt_value in opts:
         cpu_threads_num_list = list(map(int, opt_value.split(" ")))
     if opt_name in ('-o'):
         omp_num_threads_list = list(map(int, opt_value.split(" ")))
+    if opt_name in ('-s'):
+        board_size_list = list(map(int, opt_value.split(" ")))
     if opt_name in ('-f'):
         file = "../data/{}.xlsx".format(opt_value)
 
@@ -98,18 +97,22 @@ for branch in branch_list:
     # data_txt = "../data/{}_{}_threads={}_pool={}.xlsx"
 
     if "pthread" in branch:
-        for parallel_num in parallel_num_list:
-            for cpu_threads_num in cpu_threads_num_list:
-                omp_num_threads = 0
-                run()
+        for bd_size in board_size_list:
+            for parallel_num in parallel_num_list:
+                for cpu_threads_num in cpu_threads_num_list:
+                    omp_num_threads = 0
+                    run()
                 
     if "openmp" in branch:
-        for parallel_num in parallel_num_list:
-            for cpu_threads_num in cpu_threads_num_list:
-                for omp_num_threads in omp_num_threads_list:
-                    print("cpu_threads_num {}, omp_num_threads{}".format(cpu_threads_num, omp_num_threads))
-                    if cpu_threads_num < omp_num_threads:
-                        continue
-                    omp_num_threads += 2
-                    run()
+        for bd_size in board_size_list:
+            for parallel_num in parallel_num_list:
+                for cpu_threads_num in cpu_threads_num_list:
+                    for omp_num_threads in omp_num_threads_list:
+                        print("cpu_threads_num {}, omp_num_threads{}".format(cpu_threads_num, omp_num_threads))
+                        if cpu_threads_num < omp_num_threads:
+                            continue
+                        if omp_num_threads <= 8 and cpu_threads_num >= 128:
+                            continue
+                        omp_num_threads += 2
+                        run()
                 
