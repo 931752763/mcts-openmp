@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define NUM_MOVES 120
+#define NUM_MOVES 10
 #define TIME_EACH_MOVE 2*60*1000 // ms
 
 int main(int argc, char *argv[]) {
