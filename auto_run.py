@@ -9,7 +9,7 @@ from openpyxl import Workbook, load_workbook
 def create_excel(file):
     wb = Workbook()
     ws = wb.active
-    title = ["branch", "parallel_num", "cpu_threads_num", "omp_num_threads", "thread_id", "time (s)", "error_flag", "start_time", "end_time"]
+    title = ["branch", "parallel_num", "omp_num_threads", "thread_id", "cmd", "time (s)", "error_flag", "start_time", "end_time"]
     ws.append(title)
     wb.save(file)
 
@@ -27,13 +27,14 @@ def do_loop():
     for j in range(loop_num):
         begin = time.time()
         begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
-        process = subprocess.Popen(["./hybrid2", "-n", str(cpu_threads_num), "-s", str(bd_size), "-c 10", "-i 10", "-m 10"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmd = ["./hybrid2", "-n", str(cpu_threads_num), "-s", str(bd_size), "-c 10", "-i 20", "-m 10"]
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # process = subprocess.Popen(["ls /bin"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         res = process.communicate()
         # print(res)
         end = time.time()
         end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
-        new_row = [branch, parallel_num, cpu_threads_num, omp_num_threads, process.pid, (end - begin)]
+        new_row = [branch, parallel_num, omp_num_threads, process.pid, str(cmd), (end - begin)]
         if process.returncode != 0:
             new_row.append("error")
         else:
