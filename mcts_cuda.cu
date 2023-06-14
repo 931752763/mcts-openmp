@@ -31,6 +31,7 @@ static int block_dim = 1;
 static int THREADS_NUM = grid_dim * block_dim;
 
 static int CPU_THREADS_NUM = 59;
+static int RST_THREADS_NUM = 16;
 static int MAX_COUNT = 10;
 static int MAX_INDEX = 5;
 
@@ -45,8 +46,9 @@ void get_sequence(TreeNode *node, int *len, int *iarray, int *jarray);
 
 void memoryUsage();
 
-Point Mcts::run(int cpu_threads_num, int max_count, int max_index) {
+Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index) {
     CPU_THREADS_NUM = cpu_threads_num;
+	RST_THREADS_NUM = rst_threads_num;
 	MAX_COUNT = max_count;
 	MAX_INDEX = max_index;
     printf("CPU_THREADS_NUM %d\n", CPU_THREADS_NUM);
@@ -193,7 +195,7 @@ void *run_simulation_thread(void *arg)
 	srand (0);
 	
 	// while (true) {
-#pragma omp parallel for num_threads(MAX_INDEX)
+#pragma omp parallel for num_threads(RST_THREADS_NUM)
 	for(int index = 0; index <= MAX_INDEX; index++){
 		CudaBoard* board =  new CudaBoard(a->bd_size);
 		for (int i = 0; i < len; i++) {
