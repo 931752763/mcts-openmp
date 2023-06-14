@@ -10,12 +10,13 @@
 
 int main(int argc, char *argv[]) {
     int cpu_threads_num = 64;
+	int rst_threads_num = 16;
 	int max_count = 10;
 	int max_index = 10;
 	int bd_size = 9;
 	int opt;
 	int num_moves = 100;
-    const char *optstring = "hn:c:i:s:m:";
+    const char *optstring = "hn:c:i:s:m:r:";
     while((opt = getopt(argc, argv, optstring)) != -1)
     {
         switch(opt)
@@ -25,7 +26,8 @@ int main(int argc, char *argv[]) {
 			"-c: max_count, it affects the GPU computation time\n"
 			"-i: max_index, it affects the CPU computation time\n"
 			"-s: bd_size, the size of board\n"
-			"-m: num_moves, determines how many moves the two players will make\n");
+			"-m: num_moves, determines how many moves the two players will make\n"
+			"-r: rst_threads_num, nested parallel number in function run_simulation_thread\n");
 			return 0;
         case 'n':
             printf("cpu_threads_num=%s\n", optarg);
@@ -47,6 +49,10 @@ int main(int argc, char *argv[]) {
             printf("num_moves=%s\n", optarg);
 			num_moves = atoi(optarg);
             continue;
+		case 'r':
+            printf("rst_threads_num=%s\n", optarg);
+			rst_threads_num = atoi(optarg);
+            continue;
         default:
             printf("error opt");
             return -1;
@@ -66,7 +72,7 @@ int main(int argc, char *argv[]) {
 	while (step < num_moves) {
 		player1 = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
-		p = player1->run(cpu_threads_num, max_count, max_index);
+		p = player1->run(cpu_threads_num, rst_threads_num, max_count, max_index);
 		end = clock();
 		player1_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;
@@ -77,7 +83,7 @@ int main(int argc, char *argv[]) {
 
 		player2 = new Mcts(CPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
-		p = player2->run(cpu_threads_num, max_count, max_index);
+		p = player2->run(cpu_threads_num, rst_threads_num, max_count, max_index);
 		end = clock();
 		player2_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;

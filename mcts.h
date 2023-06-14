@@ -110,7 +110,7 @@ public:
 	}
 
 	//Run MCTS and get 
-	Point run(int cpu_threads_num, int max_count, int max_index);
+	Point run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index);
 	
 	void run_iteration_gpu(TreeNode* node);
 	void run_iteration_cpu(TreeNode* node);
