@@ -29,6 +29,7 @@ static int block_dim = 1;
 static int THREADS_NUM = grid_dim * block_dim;
 
 static int CPU_THREADS_NUM = 59;
+static int RST_THREADS_NUM = 16;
 static int MAX_COUNT = 10;
 static int MAX_INDEX = 5;
 
@@ -43,8 +44,9 @@ void get_sequence(TreeNode* node, int* len, int* iarray, int*jarray);
 
 void memoryUsage();
 
-Point Mcts::run(int cpu_threads_num, int max_count, int max_index) {
+Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index) {
     CPU_THREADS_NUM = cpu_threads_num;
+	RST_THREADS_NUM = rst_threads_num;
 	MAX_COUNT = max_count;
 	MAX_INDEX = max_index;
     printf("CPU_THREADS_NUM %d\n", CPU_THREADS_NUM);
