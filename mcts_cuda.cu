@@ -190,12 +190,12 @@ void *run_simulation_thread(void *arg)
 	bool abort = false;
 	COLOR player;
 	clock_t start = clock();
-	CudaBoard* board;
 	srand (0);
 	
 	// while (true) {
+#pragma omp parallel for
 	for(int index = 0; index <= MAX_INDEX; index++){
-		board =  new CudaBoard(a->bd_size);
+		CudaBoard* board =  new CudaBoard(a->bd_size);
 		for (int i = 0; i < len; i++) {
 			board->update_board(a->seq[i]);
 		}
