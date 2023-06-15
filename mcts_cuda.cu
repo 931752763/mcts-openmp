@@ -195,7 +195,7 @@ void *run_simulation_thread(void *arg)
 	srand (0);
 	
 	// while (true) {
-#pragma omp parallel for num_threads(RST_THREADS_NUM)
+#pragma omp parallel for
 	for(int index = 0; index <= MAX_INDEX; index++){
 		CudaBoard* board =  new CudaBoard(a->bd_size);
 		for (int i = 0; i < len; i++) {
