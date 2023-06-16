@@ -5,11 +5,13 @@ import threading
 import os, getopt
 import os.path
 from openpyxl import Workbook, load_workbook
+import psutil
 
 def create_excel(file):
     wb = Workbook()
     ws = wb.active
-    title = ["branch", "parallel_num", "omp_num_threads", "thread_id", "cmd", "time (s)", "error_flag", "start_time", "end_time"]
+    title = ["branch", "cpu_threads_num", "omp_num_threads", "rst_threads_num", "time (s)", 
+             "thread_id", "parallel_num", "cmd", "error_flag", "start_time", "end_time", "actual_thread_num"]
     ws.append(title)
     wb.save(file)
 
@@ -19,33 +21,53 @@ def write_excel(file, new_row):
         ws = wb.active
         ws.append(new_row)
         wb.save(file)
+        
+def record_thread_nums(pid, num_threads_of_p):
+    while psutil.pid_exists(pid):
+        try:
+            num_threads_of_p.append(psutil.Process(pid).num_threads())
+        finally:
+            time.sleep(0.5)
+    
 
 def do_loop():
-    print("branch {}, parallel_num {}, cpu_threads_num {}, omp_num_threads {}, rst_threads_num{}, loop_num {}, board size {}".
-          format(branch, parallel_num, cpu_threads_num, omp_num_threads, rst_threads_num, loop_num, bd_size))
+    rst = 0
+    if branch == "openmp-depend-modify-rst":
+        rst = rst_threads_num
+    print("branch {}, parallel_num {}, cpu_threads_num {}, omp_num_threads {}, rst_threads_num {}, loop_num {}, board size {}".
+          format(branch, parallel_num, cpu_threads_num, omp_num_threads, rst, loop_num, bd_size))
     # file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
     for j in range(loop_num):
         begin = time.time()
         begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
-        cmd = ["./hybrid2", "-n", str(cpu_threads_num), "-s", str(bd_size), "-c 10", "-i 200", "-m 10", "-r", str(rst_threads_num)]
+        cmd = ["./hybrid2", "-n", str(cpu_threads_num), "-s", str(bd_size), "-c 10", "-i 200", "-m 10", "-r", str(rst)]
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # process = subprocess.Popen(["ls /bin"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        pid = process.pid
+        
+        num_threads_of_p = []
+        thread_record = threading.Thread(target=record_thread_nums, args=(pid, num_threads_of_p, ))
+        thread_record.start()
+        
         res = process.communicate()
-        # print(res)
         end = time.time()
         end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
-        new_row = [branch, parallel_num, omp_num_threads, process.pid, str(cmd), (end - begin)]
+        new_row = [branch, cpu_threads_num, omp_num_threads, rst, (end - begin), pid, parallel_num, str(cmd)]
         if process.returncode != 0:
             new_row.append("error")
+            print(res)
         else:
             new_row.append("ok")
         new_row.append(begin_str)
         new_row.append(end_str)
         print(new_row)
+        # record actual num of thread
+        thread_record.join()
+        num_threads_of_p_str = str(num_threads_of_p)
+        new_row.append(num_threads_of_p_str[1:len(num_threads_of_p_str)-1])
         write_excel(file, new_row)
 
 def run():
-    os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
     # print("check gcc version")
     # process = subprocess.run(["gcc", "--version"], stdout=subprocess.PIPE)
     # print(process.stdout)
@@ -76,7 +98,7 @@ omp_num_threads_list = []
 rst_threads_num_list = []
 board_size_list = []
 file = "../data/test.xlsx"
-opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:-o:-s:-f:')
+opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:-o:-r:-s:-f:')
 for opt_name,opt_value in opts:
     if opt_name in ('-b'):
         branch_list = opt_value.split(" ")
@@ -114,6 +136,7 @@ for branch in branch_list:
                 for cpu_threads_num in cpu_threads_num_list:
                     for omp_num_threads in omp_num_threads_list:
                         print("cpu_threads_num {}, omp_num_threads{}".format(cpu_threads_num, omp_num_threads))
+                        os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
                         run()
     
     if "openmp-depend-modify-rst" == branch:
@@ -124,5 +147,6 @@ for branch in branch_list:
                     for omp_num_threads in omp_num_threads_list:
                         for rst_threads_num in rst_threads_num_list:
                             print("cpu_threads_num {}, omp_num_threads{}, rst_threads_num{}".format(cpu_threads_num, omp_num_threads, rst_threads_num))
+                            os.environ["OMP_NUM_THREADS"] = "{}, {}".format(omp_num_threads, rst_threads_num)
                             run()
                 
