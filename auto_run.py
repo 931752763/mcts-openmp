@@ -6,12 +6,14 @@ import os, getopt
 import os.path
 from openpyxl import Workbook, load_workbook
 import psutil
+from nvitop import *
 
 def create_excel(file):
     wb = Workbook()
     ws = wb.active
     title = ["branch", "cpu_threads_num", "omp_num_threads", "rst_threads_num", "time (s)", 
-             "thread_id", "parallel_num", "cmd", "error_flag", "start_time", "end_time", "actual_thread_num"]
+             "thread_id", "parallel_num", "cmd", "error_flag", "start_time", "end_time",
+             "gpu_sm_utilization", "gpu_memory", "cpu_percent", "host_memory"]
     ws.append(title)
     wb.save(file)
 
@@ -22,12 +24,25 @@ def write_excel(file, new_row):
         ws.append(new_row)
         wb.save(file)
         
-def record_thread_nums(pid, num_threads_of_p):
+def record_usage(pid, usage):
     while psutil.pid_exists(pid):
         try:
-            num_threads_of_p.append(psutil.Process(pid).num_threads())
-        finally:
-            time.sleep(0.5)
+            devices = Device.all()  # or `Device.all()` to use NVML ordinal instead
+            for device in devices:
+                processes = device.processes()
+                if len(processes) <= 0:
+                    continue
+                processes = GpuProcess.take_snapshots(processes.values(), failsafe=True)
+                for p in processes:
+                    if p.pid != pid:
+                        continue
+                    usage["gpu_sm_utilization"].append(p.gpu_sm_utilization)
+                    usage["gpu_memory"].append(p.gpu_memory)
+                    usage["cpu_percent"].append(HostProcess(pid).cpu_percent(interval=0.1))
+                    usage["host_memory"].append(p.host_memory)
+                    break
+        except:
+            break
     
 
 def do_loop():
@@ -45,8 +60,8 @@ def do_loop():
         # process = subprocess.Popen(["ls /bin"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         pid = process.pid
         
-        num_threads_of_p = []
-        thread_record = threading.Thread(target=record_thread_nums, args=(pid, num_threads_of_p, ))
+        usage = {"gpu_sm_utilization":[], "gpu_memory":[], "cpu_percent":[], "host_memory":[]}
+        thread_record = threading.Thread(target=record_usage, args=(pid, usage, ))
         thread_record.start()
         
         res = process.communicate()
@@ -63,8 +78,10 @@ def do_loop():
         print(new_row)
         # record actual num of thread
         thread_record.join()
-        num_threads_of_p_str = str(num_threads_of_p)
-        new_row.append(num_threads_of_p_str[1:len(num_threads_of_p_str)-1])
+        for key in usage:
+            val = usage[key]
+            val_str = str(val)
+            new_row.append(val_str[1:len(val_str)-1])
         write_excel(file, new_row)
 
 def run():
