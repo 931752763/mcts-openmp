@@ -26,8 +26,8 @@
 #define MAX_GAME_TIME_9_9 1000.0
 #define MAX_GAME_TIME_11_11 4000.0
 
-static int GRID_DIM = 2048;
-static int BLOCK_DIM = 1;
+static int grid_dim = 2048;
+static int block_dim = 1;
 static int THREADS_NUM = 2048;
 
 static int CPU_THREADS_NUM = 59;
@@ -46,13 +46,13 @@ void get_sequence(TreeNode *node, int *len, int *iarray, int *jarray);
 
 void memoryUsage();
 
-Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index, int grid_dim, int block_dim) {
+Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index, int _grid_dim, int _block_dim) {
     CPU_THREADS_NUM = cpu_threads_num;
 	RST_THREADS_NUM = rst_threads_num;
 	MAX_COUNT = max_count;
 	MAX_INDEX = max_index;
-    GRID_DIM = grid_dim;
-	BLOCK_DIM = block_dim;
+    grid_dim = _grid_dim;
+	block_dim = _block_dim;
 	THREADS_NUM = grid_dim * block_dim;
 	clock_gettime(CLOCK_REALTIME, &start);
 	size_t heapszie = 256 * 1024 * 1024;
