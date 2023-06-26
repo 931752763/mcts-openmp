@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #define TIME_EACH_MOVE 2*60*1000 // ms
 
@@ -17,7 +18,17 @@ int main(int argc, char *argv[]) {
 	int opt;
 	int num_moves = 100;
     const char *optstring = "hn:c:i:s:m:r:";
-    while((opt = getopt(argc, argv, optstring)) != -1)
+	struct option opts[] = {
+        {"help", optional_argument, NULL, 'h'},
+        {"cpu_threads_num", optional_argument, NULL, 'n'},
+        {"max_count", optional_argument, NULL, 'c'},
+        {"max_index", optional_argument, NULL, 'i'},
+		{"bd_size", optional_argument, NULL, 's'},
+		{"num_moves", optional_argument, NULL, 'm'},
+		{"rst_threads_num", optional_argument, NULL, 'r'},
+        {0, 0, 0, 0},
+    };
+    while((opt = getopt_long(argc, argv, optstring, opts, NULL)) != -1)
     {
         switch(opt)
         {
@@ -81,7 +92,7 @@ int main(int argc, char *argv[]) {
 		board.update_board(p);
 		board.print_board();
 
-		player2 = new Mcts(CPU, bd_size, TIME_EACH_MOVE, seq);
+		player2 = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
 		p = player2->run(cpu_threads_num, rst_threads_num, max_count, max_index);
 		end = clock();
