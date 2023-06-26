@@ -17,6 +17,8 @@ int main(int argc, char *argv[]) {
 	int bd_size = 9;
 	int opt;
 	int num_moves = 100;
+	int grid_dim = 2048;
+	int block_dim = 1;
     const char *optstring = "hn:c:i:s:m:r:";
 	struct option opts[] = {
         {"help", optional_argument, NULL, 'h'},
@@ -26,6 +28,8 @@ int main(int argc, char *argv[]) {
 		{"bd_size", optional_argument, NULL, 's'},
 		{"num_moves", optional_argument, NULL, 'm'},
 		{"rst_threads_num", optional_argument, NULL, 'r'},
+		{"grid_dim", optional_argument, NULL, "g"},
+		{"block_dim", optional_argument, NULL, "b"},
         {0, 0, 0, 0},
     };
     while((opt = getopt_long(argc, argv, optstring, opts, NULL)) != -1)
@@ -64,6 +68,14 @@ int main(int argc, char *argv[]) {
             printf("rst_threads_num=%s\n", optarg);
 			rst_threads_num = atoi(optarg);
             continue;
+		case 'g':
+            printf("grid_dim=%s\n", optarg);
+			grid_dim = atoi(optarg);
+            continue;
+		case 'b':
+            printf("block_dim=%s\n", optarg);
+			block_dim = atoi(optarg);
+            continue;
         default:
             printf("error opt");
             return -1;
@@ -83,7 +95,7 @@ int main(int argc, char *argv[]) {
 	while (step < num_moves) {
 		player1 = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
-		p = player1->run(cpu_threads_num, rst_threads_num, max_count, max_index);
+		p = player1->run(cpu_threads_num, rst_threads_num, max_count, max_index, grid_dim, block_dim);
 		end = clock();
 		player1_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;
@@ -94,7 +106,7 @@ int main(int argc, char *argv[]) {
 
 		player2 = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
-		p = player2->run(cpu_threads_num, rst_threads_num, max_count, max_index);
+		p = player2->run(cpu_threads_num, rst_threads_num, max_count, max_index, grid_dim, block_dim);
 		end = clock();
 		player2_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;
