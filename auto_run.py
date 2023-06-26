@@ -49,19 +49,22 @@ def do_loop():
     rst = 0
     if branch == "openmp-depend-modify-rst":
         rst = rst_threads_num
-    print("branch {}, parallel_num {}, cpu_threads_num {}, omp_num_threads {}, rst_threads_num {}, max_index {}, loop_num {}, board size {}".
-          format(branch, parallel_num, cpu_threads_num, omp_num_threads, rst, max_index, loop_num, bd_size))
+    print("branch {}, parallel_num {}, cpu_threads_num {}, omp_num_threads {}, \
+          rst_threads_num {}, max_index {}, loop_num {}, board size {}, grid_dim {}, block_dim {}".
+          format(branch, parallel_num, cpu_threads_num, omp_num_threads, rst, max_index, loop_num, bd_size, grid_dim, block_dim))
     # file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
     for j in range(loop_num):
         begin = time.time()
         begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
         cmd = ["./hybrid2", 
                "--cpu_threads_num={}".format(cpu_threads_num),
-               "--max_count=".format(10), 
+               "--max_count={}".format(10), 
                "--max_index={}".format(max_index),
                "--bd_size={}".format(bd_size), 
-               "-num_moves=".format(4), 
-               "--rst_threads_num={}".format(rst)]
+               "--num_moves={}".format(4),
+               "--rst_threads_num={}".format(rst),
+               "--grid_dim={}".format(grid_dim),
+               "--block_dim={}".format(block_dim)]
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # process = subprocess.Popen(["ls /bin"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         pid = process.pid
@@ -118,10 +121,12 @@ omp_num_threads_list = []
 rst_threads_num_list = []
 board_size_list = []
 max_index_list = []
+grid_dim_list = []
+block_dim_list = []
 file = "../data/test.xlsx"
 options = "-b:-l:-p:-c:-o:-r:-s:-i:-f:"
 long_options = ["branch=", "loop_num=", "parallel_num_list=", "cpu_threads_num_list=", "omp_num_threads_list=",
-                "rst_threads_num_list=", "board_size_list=", "max_index_list=", "file="]
+                "rst_threads_num_list=", "board_size_list=", "max_index_list=", "grid_dim_list=", "block_dim_list=", "file="]
 opts,args = getopt.getopt(sys.argv[1:], options, long_options)
 for opt_name,opt_value in opts:
     if opt_name in ('-b', "--branch"):
@@ -140,6 +145,10 @@ for opt_name,opt_value in opts:
         board_size_list = list(map(int, opt_value.split(" ")))
     if opt_name in ('-i', "--max_index_list"):
         max_index_list = list(map(int, opt_value.split(" ")))
+    if opt_name in ("--grid_dim_list"):
+        grid_dim_list = list(map(int, opt_value.split(" ")))
+    if opt_name in ("--block_dim_list"):
+        block_dim_list = list(map(int, opt_value.split(" ")))
     if opt_name in ('-f', "--file"):
         file = "../data/{}.xlsx".format(opt_value)
 
@@ -158,15 +167,17 @@ for branch in branch_list:
         for parallel_num in parallel_num_list:
             for cpu_threads_num in cpu_threads_num_list:
                 for max_index in range(max_index_list[0], max_index_list[1], max_index_list[2]):
-                    if "pthread-norand" == branch:
-                        omp_num_threads = 0
-                        run()
-                    elif "openmp-depend" == branch:
-                        for omp_num_threads in omp_num_threads_list:
-                            os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
-                            run()
-                    elif "openmp-depend-modify-rst" == branch:
-                        for omp_num_threads in omp_num_threads_list:
-                            for rst_threads_num in rst_threads_num_list:
-                                os.environ["OMP_NUM_THREADS"] = "{}, {}".format(omp_num_threads, rst_threads_num)
+                    for grid_dim in grid_dim_list:
+                        for block_dim in block_dim_list:
+                            if "pthread-norand" == branch:
+                                omp_num_threads = 0
                                 run()
+                            elif "openmp-depend" == branch:
+                                for omp_num_threads in omp_num_threads_list:
+                                    os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
+                                    run()
+                            elif "openmp-depend-modify-rst" == branch:
+                                for omp_num_threads in omp_num_threads_list:
+                                    for rst_threads_num in rst_threads_num_list:
+                                        os.environ["OMP_NUM_THREADS"] = "{}, {}".format(omp_num_threads, rst_threads_num)
+                                        run()

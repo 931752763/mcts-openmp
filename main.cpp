@@ -20,19 +20,18 @@ int main(int argc, char *argv[]) {
 	int grid_dim = 2048;
 	int block_dim = 1;
     const char *optstring = "hn:c:i:s:m:r:";
-	struct option opts[] = {
-        {"help", optional_argument, NULL, 'h'},
-        {"cpu_threads_num", optional_argument, NULL, 'n'},
-        {"max_count", optional_argument, NULL, 'c'},
-        {"max_index", optional_argument, NULL, 'i'},
-		{"bd_size", optional_argument, NULL, 's'},
-		{"num_moves", optional_argument, NULL, 'm'},
-		{"rst_threads_num", optional_argument, NULL, 'r'},
-		{"grid_dim", optional_argument, NULL, "g"},
-		{"block_dim", optional_argument, NULL, "b"},
-        {0, 0, 0, 0},
+	const option opts[] = {
+        {"help", no_argument, nullptr, 'h'},
+        {"cpu_threads_num", optional_argument, nullptr, 'n'},
+        {"max_count", optional_argument, nullptr, 'c'},
+        {"max_index", optional_argument, nullptr, 'i'},
+		{"bd_size", optional_argument, nullptr, 's'},
+		{"num_moves", optional_argument, nullptr, 'm'},
+		{"rst_threads_num", optional_argument, nullptr, 'r'},
+		{"grid_dim", optional_argument, nullptr, 'g'},
+		{"block_dim", optional_argument, nullptr, 'b'}
     };
-    while((opt = getopt_long(argc, argv, optstring, opts, NULL)) != -1)
+    while((opt = getopt_long(argc, argv, optstring, opts, nullptr)) != -1)
     {
         switch(opt)
         {
