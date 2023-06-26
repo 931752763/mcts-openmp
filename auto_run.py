@@ -11,7 +11,7 @@ from nvitop import *
 def create_excel(file):
     wb = Workbook()
     ws = wb.active
-    title = ["branch", "cpu_threads_num", "omp_num_threads", "rst_threads_num", "time (s)", 
+    title = ["branch", "cpu_threads_num", "omp_num_threads", "rst_threads_num", "max_index", "time (s)", 
              "thread_id", "parallel_num", "cmd", "error_flag", "start_time", "end_time",
              "gpu_sm_utilization", "gpu_memory", "cpu_percent", "host_memory"]
     ws.append(title)
@@ -49,13 +49,19 @@ def do_loop():
     rst = 0
     if branch == "openmp-depend-modify-rst":
         rst = rst_threads_num
-    print("branch {}, parallel_num {}, cpu_threads_num {}, omp_num_threads {}, rst_threads_num {}, loop_num {}, board size {}".
-          format(branch, parallel_num, cpu_threads_num, omp_num_threads, rst, loop_num, bd_size))
+    print("branch {}, parallel_num {}, cpu_threads_num {}, omp_num_threads {}, rst_threads_num {}, max_index {}, loop_num {}, board size {}".
+          format(branch, parallel_num, cpu_threads_num, omp_num_threads, rst, max_index, loop_num, bd_size))
     # file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
     for j in range(loop_num):
         begin = time.time()
         begin_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(begin))
-        cmd = ["./hybrid2", "-n", str(cpu_threads_num), "-s", str(bd_size), "-c 10", "-i 200", "-m 10", "-r", str(rst)]
+        cmd = ["./hybrid2", 
+               "--cpu_threads_num={}".format(cpu_threads_num),
+               "--max_count=".format(10), 
+               "--max_index={}".format(max_index),
+               "--bd_size={}".format(bd_size), 
+               "-num_moves=".format(4), 
+               "--rst_threads_num={}".format(rst)]
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # process = subprocess.Popen(["ls /bin"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         pid = process.pid
@@ -67,7 +73,7 @@ def do_loop():
         res = process.communicate()
         end = time.time()
         end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
-        new_row = [branch, cpu_threads_num, omp_num_threads, rst, (end - begin), pid, parallel_num, str(cmd)]
+        new_row = [branch, cpu_threads_num, omp_num_threads, rst, max_index, (end - begin), pid, parallel_num, str(cmd)]
         if process.returncode != 0:
             new_row.append("error")
             print(res)
@@ -85,10 +91,6 @@ def do_loop():
         write_excel(file, new_row)
 
 def run():
-    # print("check gcc version")
-    # process = subprocess.run(["gcc", "--version"], stdout=subprocess.PIPE)
-    # print(process.stdout)
-    
     # file = data_txt.format(branch, parallel_num, cpu_threads_num, omp_num_threads)
     if not os.path.isfile(file):
         create_excel(file)
@@ -107,6 +109,7 @@ def run():
 
 # python auto_run.py -b {branch_list} -l {loop_num} -p {parallel_num} 
 # -c {cpu_threads_num_list} -o {omp_num_threads_list} -r {rst_threads_num_list} -s {board_size_list} -f {file_name}
+# -i {max_index_list}
 branch_list = []
 loop_num = 20
 parallel_num_list = []
@@ -114,25 +117,36 @@ cpu_threads_num_list = []
 omp_num_threads_list = []
 rst_threads_num_list = []
 board_size_list = []
+max_index_list = []
 file = "../data/test.xlsx"
-opts,args = getopt.getopt(sys.argv[1:],'-b:-l:-p:-c:-o:-r:-s:-f:')
+options = "-b:-l:-p:-c:-o:-r:-s:-i:-f:"
+long_options = ["branch=", "loop_num=", "parallel_num_list=", "cpu_threads_num_list=", "omp_num_threads_list=",
+                "rst_threads_num_list=", "board_size_list=", "max_index_list=", "file="]
+opts,args = getopt.getopt(sys.argv[1:], options, long_options)
 for opt_name,opt_value in opts:
-    if opt_name in ('-b'):
+    if opt_name in ('-b', "--branch"):
         branch_list = opt_value.split(" ")
-    if opt_name in ('-l'):
+    if opt_name in ('-l', "--loop_num"):
         loop_num = int(opt_value)
-    if opt_name in ('-p'):
+    if opt_name in ('-p', "--parallel_num_list"):
         parallel_num_list = list(map(int, opt_value.split(" ")))
-    if opt_name in ('-c'):
+    if opt_name in ('-c', "--cpu_threads_num_list"):
         cpu_threads_num_list = list(map(int, opt_value.split(" ")))
-    if opt_name in ('-o'):
+    if opt_name in ('-o', "--omp_num_threads_list"):
         omp_num_threads_list = list(map(int, opt_value.split(" ")))
-    if opt_name in ('-r'):
+    if opt_name in ('-r', "--rst_threads_num_list"):
         rst_threads_num_list = list(map(int, opt_value.split(" ")))
-    if opt_name in ('-s'):
+    if opt_name in ('-s', "--board_size_list"):
         board_size_list = list(map(int, opt_value.split(" ")))
-    if opt_name in ('-f'):
+    if opt_name in ('-i', "--max_index_list"):
+        max_index_list = list(map(int, opt_value.split(" ")))
+    if opt_name in ('-f', "--file"):
         file = "../data/{}.xlsx".format(opt_value)
+
+print("branch: {}, loop_num: {}, parallel_num_list: {}, cpu_threads_num_list: {}, omp_num_threads_list: {}, \
+                rst_threads_num_list: {}, board_size_list: {}, max_index_list: {}, file".format(
+                branch_list, loop_num, parallel_num_list, cpu_threads_num_list, omp_num_threads_list,
+                rst_threads_num_list, board_size_list, max_index_list, file))
 
 lock = threading.Lock()
 for branch in branch_list:
@@ -140,30 +154,19 @@ for branch in branch_list:
     os.system("make")
     # data_txt = "../data/{}_{}_threads={}_pool={}.xlsx"
 
-    if "pthread-norand" == branch:
-        for bd_size in board_size_list:
-            for parallel_num in parallel_num_list:
-                for cpu_threads_num in cpu_threads_num_list:
-                    omp_num_threads = 0
-                    run()
-                
-    if "openmp-depend" == branch:
-        for bd_size in board_size_list:
-            for parallel_num in parallel_num_list:
-                for cpu_threads_num in cpu_threads_num_list:
-                    for omp_num_threads in omp_num_threads_list:
-                        print("cpu_threads_num {}, omp_num_threads{}".format(cpu_threads_num, omp_num_threads))
-                        os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
+    for bd_size in board_size_list:
+        for parallel_num in parallel_num_list:
+            for cpu_threads_num in cpu_threads_num_list:
+                for max_index in range(max_index_list[0], max_index_list[1], max_index_list[2]):
+                    if "pthread-norand" == branch:
+                        omp_num_threads = 0
                         run()
-    
-    if "openmp-depend-modify-rst" == branch:
-        os.environ["OMP_NESTED"] = "TRUE"
-        for bd_size in board_size_list:
-            for parallel_num in parallel_num_list:
-                for cpu_threads_num in cpu_threads_num_list:
-                    for omp_num_threads in omp_num_threads_list:
-                        for rst_threads_num in rst_threads_num_list:
-                            print("cpu_threads_num {}, omp_num_threads{}, rst_threads_num{}".format(cpu_threads_num, omp_num_threads, rst_threads_num))
-                            os.environ["OMP_NUM_THREADS"] = "{}, {}".format(omp_num_threads, rst_threads_num)
+                    elif "openmp-depend" == branch:
+                        for omp_num_threads in omp_num_threads_list:
+                            os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
                             run()
-                
+                    elif "openmp-depend-modify-rst" == branch:
+                        for omp_num_threads in omp_num_threads_list:
+                            for rst_threads_num in rst_threads_num_list:
+                                os.environ["OMP_NUM_THREADS"] = "{}, {}".format(omp_num_threads, rst_threads_num)
+                                run()
