@@ -458,12 +458,14 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 					// printf("run_simulation1 \n");
 					run_simulation<<<grid_dim, block_dim>>>(incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
 															bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
+					cudaCheckError();
 					// printf("run_simulation2 \n");
 
 					// block method
 					cudaMemcpy(win_increase, cuda_win_increase, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 					cudaMemcpy(step_increase, cuda_step, sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
 					cudaMemcpy(sim_increase, cuda_sim, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+					cudaCheckError();
 					// printf("after cudaMemcpy \n");
 					double total_sim = 0.0;
 					double total_win = 0.0;
