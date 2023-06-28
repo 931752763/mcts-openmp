@@ -9,6 +9,7 @@
 #include <thrust/device_free.h>
 #include <thrust/extrema.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include "mcts.h"
 #include "CudaGo.h"
@@ -23,6 +24,17 @@
 #define CLOCK_RATE 1215500.0 // titianx  745000.0; // For tesla K40
 #define MAX_GAME_TIME_9_9 1000.0
 #define MAX_GAME_TIME_11_11 4000.0
+
+// Macro for checking cuda errors following a cuda launch or api call
+#define cudaCheckError()                                       \
+{                                                            \
+	cudaError_t e = cudaGetLastError();                        \
+	if (e != cudaSuccess) {                                    \
+		printf("Cuda failure %s:%d: '%s'\n", __FILE__, __LINE__, \
+				cudaGetErrorString(e));                           \
+		exit(EXIT_FAILURE);                                      \
+	}                                                          \
+}
 
 static int grid_dim = 2048;
 static int block_dim = 1;
@@ -53,8 +65,8 @@ Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max
 	block_dim = _block_dim;
 	THREADS_NUM = grid_dim * block_dim;
 	clock_gettime(CLOCK_REALTIME, &start);
-	size_t heapszie = 256 * 1024 * 1024;
-	cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
+	// size_t heapszie = 256 * 1024 * 1024;
+	// cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
 
 	// while (true) {
 		if (mode == GPU) {
@@ -98,10 +110,20 @@ TreeNode* Mcts::selection(TreeNode* node) {
 }
 
 // Typical Monte Carlo Simulation
+/**
+total: 			(bd_size) * (bd_size)
+iarray: 		sizeof(int)*total * total
+jarray: 		sizeof(int)*total * total
+len: 			sizeof(int)*total
+win_increase: 	sizeof(double) * THREADS_NUM
+step: 			sizeof(int) * THREADS_NUM
+sim: 			sizeof(double) * THREADS_NUM
+*/
 __global__ void run_simulation(int incre, int total, int* iarray, int* jarray, int* len, double* win_increase,
                                int* step, double* sim, int bd_size, unsigned int seed, double time) {
 	long long int start_game = clock64();
-	int index = blockIdx.x;
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+
 	win_increase[index] = 0.0;
 	step[index] = 0;
 	sim[index] = 0;
@@ -368,7 +390,7 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 			//         bd_size, time(NULL), std::min(MAX_GAME_TIME_9_9, timeLeft));
 			run_simulation <<< grid_dim, block_dim >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
 			        bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
-
+			cudaCheckError();
 
 			// collect cpu thread data
 			children_index = 0;
@@ -385,6 +407,7 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 			cudaMemcpy(win_increase, cuda_win_increase, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 			cudaMemcpy(step_increase, cuda_step, sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
 			cudaMemcpy(sim_increase, cuda_sim, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
+			cudaCheckError();
 
 			double total_sim = 0.0;
 			double total_win = 0.0;

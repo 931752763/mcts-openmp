@@ -11,7 +11,7 @@ from nvitop import *
 def create_excel(file):
     wb = Workbook()
     ws = wb.active
-    title = ["branch", "cpu_threads_num", "omp_num_threads", "rst_threads_num", "max_index", "time (s)", 
+    title = ["branch", "cpu_threads_num", "omp_num_threads", "rst_threads_num", "max_index", "grid_dim", "block_dim", "time (s)", 
              "thread_id", "parallel_num", "cmd", "error_flag", "start_time", "end_time",
              "gpu_sm_utilization", "gpu_memory", "cpu_percent", "host_memory"]
     ws.append(title)
@@ -76,7 +76,7 @@ def do_loop():
         res = process.communicate()
         end = time.time()
         end_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))
-        new_row = [branch, cpu_threads_num, omp_num_threads, rst, max_index, (end - begin), pid, parallel_num, str(cmd)]
+        new_row = [branch, cpu_threads_num, omp_num_threads, rst, max_index, grid_dim, block_dim, (end - begin), pid, parallel_num, str(cmd)]
         if process.returncode != 0:
             new_row.append("error")
             print(res)
@@ -110,9 +110,9 @@ def run():
     # print("sleep 5 min to seperate")
     # time.sleep(300)
 
-# python auto_run.py -b {branch_list} -l {loop_num} -p {parallel_num} 
-# -c {cpu_threads_num_list} -o {omp_num_threads_list} -r {rst_threads_num_list} -s {board_size_list} -f {file_name}
-# -i {max_index_list}
+# python auto_run.py --branch="pthread-norand" --loop_num=1 --parallel_num_list="1" 
+# --cpu_threads_num_list="0" --omp_num_threads_list="2" --rst_threads_num_list="0" --board_size_list="15" 
+# --max_index_range="10 20 10" --file=0626-test --grid_dim_range="128 2048 128" --block_dim_range="128 2048 128"
 branch_list = []
 loop_num = 20
 parallel_num_list = []
@@ -120,13 +120,13 @@ cpu_threads_num_list = []
 omp_num_threads_list = []
 rst_threads_num_list = []
 board_size_list = []
-max_index_list = []
-grid_dim_list = []
-block_dim_list = []
+max_index_range = []
+grid_dim_range = []
+block_dim_range = []
 file = "../data/test.xlsx"
 options = "-b:-l:-p:-c:-o:-r:-s:-i:-f:"
 long_options = ["branch=", "loop_num=", "parallel_num_list=", "cpu_threads_num_list=", "omp_num_threads_list=",
-                "rst_threads_num_list=", "board_size_list=", "max_index_list=", "grid_dim_list=", "block_dim_list=", "file="]
+                "rst_threads_num_list=", "board_size_list=", "max_index_range=", "grid_dim_range=", "block_dim_range=", "file="]
 opts,args = getopt.getopt(sys.argv[1:], options, long_options)
 for opt_name,opt_value in opts:
     if opt_name in ('-b', "--branch"):
@@ -143,19 +143,19 @@ for opt_name,opt_value in opts:
         rst_threads_num_list = list(map(int, opt_value.split(" ")))
     if opt_name in ('-s', "--board_size_list"):
         board_size_list = list(map(int, opt_value.split(" ")))
-    if opt_name in ('-i', "--max_index_list"):
-        max_index_list = list(map(int, opt_value.split(" ")))
-    if opt_name in ("--grid_dim_list"):
-        grid_dim_list = list(map(int, opt_value.split(" ")))
-    if opt_name in ("--block_dim_list"):
-        block_dim_list = list(map(int, opt_value.split(" ")))
+    if opt_name in ('-i', "--max_index_range"):
+        max_index_range = list(map(int, opt_value.split(" ")))
+    if opt_name in ("--grid_dim_range"):
+        grid_dim_range = list(map(int, opt_value.split(" ")))
+    if opt_name in ("--block_dim_range"):
+        block_dim_range = list(map(int, opt_value.split(" ")))
     if opt_name in ('-f', "--file"):
         file = "../data/{}.xlsx".format(opt_value)
 
 print("branch: {}, loop_num: {}, parallel_num_list: {}, cpu_threads_num_list: {}, omp_num_threads_list: {}, \
-                rst_threads_num_list: {}, board_size_list: {}, max_index_list: {}, file".format(
+                rst_threads_num_list: {}, board_size_list: {}, max_index_range: {}, grid_dim_range: {}, block_dim_range: {}, file: {}".format(
                 branch_list, loop_num, parallel_num_list, cpu_threads_num_list, omp_num_threads_list,
-                rst_threads_num_list, board_size_list, max_index_list, file))
+                rst_threads_num_list, board_size_list, max_index_range, grid_dim_range, block_dim_range, file))
 
 lock = threading.Lock()
 for branch in branch_list:
@@ -166,9 +166,9 @@ for branch in branch_list:
     for bd_size in board_size_list:
         for parallel_num in parallel_num_list:
             for cpu_threads_num in cpu_threads_num_list:
-                for max_index in range(max_index_list[0], max_index_list[1], max_index_list[2]):
-                    for grid_dim in grid_dim_list:
-                        for block_dim in block_dim_list:
+                for max_index in range(max_index_range[0], max_index_range[1], max_index_range[2]):
+                    for grid_dim in range(grid_dim_range[0], grid_dim_range[1], grid_dim_range[2]):
+                        for block_dim in range(block_dim_range[0], block_dim_range[1], block_dim_range[2]):
                             if "pthread-norand" == branch:
                                 omp_num_threads = 0
                                 run()
