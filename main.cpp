@@ -6,10 +6,13 @@
 #include <time.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <cuda.h>
 
 #define TIME_EACH_MOVE 2*60*1000 // ms
 
 int main(int argc, char *argv[]) {
+	size_t heapszie = 1024 * 1024 * 1024;
+	cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
     int cpu_threads_num = 64;
 	int rst_threads_num = 16;
 	int max_count = 10;
@@ -44,35 +47,27 @@ int main(int argc, char *argv[]) {
 			"-r: rst_threads_num, nested parallel number in function run_simulation_thread\n");
 			return 0;
         case 'n':
-            printf("cpu_threads_num=%s\n", optarg);
 			cpu_threads_num = atoi(optarg);
             continue;
         case 'c':
-            printf("max_count=%s\n", optarg);
 			max_count = atoi(optarg);
             continue;
         case 'i':
-            printf("max_index=%s\n", optarg);
 			max_index = atoi(optarg);
             continue;
         case 's':
-            printf("bd_size=%s\n", optarg);
 			bd_size = atoi(optarg);
             continue;
 		case 'm':
-            printf("num_moves=%s\n", optarg);
 			num_moves = atoi(optarg);
             continue;
 		case 'r':
-            printf("rst_threads_num=%s\n", optarg);
 			rst_threads_num = atoi(optarg);
             continue;
 		case 'g':
-            printf("grid_dim=%s\n", optarg);
 			grid_dim = atoi(optarg);
             continue;
 		case 'b':
-            printf("block_dim=%s\n", optarg);
 			block_dim = atoi(optarg);
             continue;
         default:
@@ -80,6 +75,10 @@ int main(int argc, char *argv[]) {
             return -1;
         }
     }
+	printf("cpu_threads_num = %d\nrst_threads_num = %d\nmax_count = %d\nmax_index = %d\n"
+	"bd_size = %d\nnum_moves = %d\ngrid_dim = %d\nblock_dim = %d\n", 
+	cpu_threads_num, rst_threads_num, max_count, max_index,
+	bd_size, num_moves, grid_dim, block_dim);
 
 	Mcts* player1;
 	Mcts* player2;

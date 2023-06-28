@@ -26,6 +26,17 @@
 #define MAX_GAME_TIME_9_9 1000.0
 #define MAX_GAME_TIME_11_11 4000.0
 
+// Macro for checking cuda errors following a cuda launch or api call
+#define cudaCheckError()                                       \
+{                                                            \
+	cudaError_t e = cudaGetLastError();                        \
+	if (e != cudaSuccess) {                                    \
+		printf("Cuda failure %s:%d: '%s'\n", __FILE__, __LINE__, \
+				cudaGetErrorString(e));                           \
+		exit(EXIT_FAILURE);                                      \
+	}                                                          \
+}
+
 static int grid_dim = 2048;
 static int block_dim = 1;
 static int THREADS_NUM = 2048;
@@ -55,8 +66,8 @@ Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max
 	block_dim = _block_dim;
 	THREADS_NUM = grid_dim * block_dim;
 	clock_gettime(CLOCK_REALTIME, &start);
-	size_t heapszie = 256 * 1024 * 1024;
-	cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
+	// size_t heapszie = 256 * 1024 * 1024;
+	// cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
 
 	// while (true)
 	// {
@@ -110,11 +121,20 @@ TreeNode *Mcts::selection(TreeNode *node)
 }
 
 // Typical Monte Carlo Simulation
-__global__ void run_simulation(int incre, int total, int *iarray, int *jarray, int *len, double *win_increase,
-							   int *step, double *sim, int bd_size, unsigned int seed, double time)
-{
+/**
+total: 			(bd_size) * (bd_size)
+iarray: 		sizeof(int)*total * total
+jarray: 		sizeof(int)*total * total
+len: 			sizeof(int)*total
+win_increase: 	sizeof(double) * THREADS_NUM
+step: 			sizeof(int) * THREADS_NUM
+sim: 			sizeof(double) * THREADS_NUM
+*/
+__global__ void run_simulation(int incre, int total, int* iarray, int* jarray, int* len, double* win_increase,
+                               int* step, double* sim, int bd_size, unsigned int seed, double time) {
 	long long int start_game = clock64();
-	int index = blockIdx.x;
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+
 	win_increase[index] = 0.0;
 	step[index] = 0;
 	sim[index] = 0;
