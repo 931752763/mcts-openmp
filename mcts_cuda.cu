@@ -15,6 +15,7 @@
 #include "CudaGo.h"
 #include "deque.h"
 #include "point.h"
+#include "scheduled.hpp"
 
 #define BILLION 1000000000L
 #define MILLION 1000000.0
@@ -36,14 +37,14 @@
 	}                                                          \
 }
 
-static int grid_dim = 2048;
-static int block_dim = 1;
+static int GRID_DIM = 2048;
+static int BLOCK_DIM = 1;
 static int THREADS_NUM = 2048;
 
-static int CPU_THREADS_NUM = 59;
+static int CPU_THREADS_NUM = 32;
 static int RST_THREADS_NUM = 16;
 static int MAX_COUNT = 10;
-static int MAX_INDEX = 5;
+static int MAX_INDEX = 100;
 
 bool checkAbort();
 __device__ bool checkAbortCuda(long long int elapse, double timeLeft);
@@ -56,14 +57,17 @@ void get_sequence(TreeNode* node, int* len, int* iarray, int*jarray);
 
 void memoryUsage();
 
-Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index, int _grid_dim, int _block_dim) {
+Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index, int grid_dim, int block_dim) {
+
+	scheduled(&grid_dim, block_dim, &cpu_threads_num, max_index);
+	printf("grid_dim %d, block_dim %d, cpu_threads_num %d, max_index %d\n", grid_dim, block_dim, cpu_threads_num, max_index);
     CPU_THREADS_NUM = cpu_threads_num;
 	RST_THREADS_NUM = rst_threads_num;
 	MAX_COUNT = max_count;
 	MAX_INDEX = max_index;
-    grid_dim = _grid_dim;
-	block_dim = _block_dim;
-	THREADS_NUM = grid_dim * block_dim;
+    GRID_DIM = grid_dim;
+	BLOCK_DIM = block_dim;
+	THREADS_NUM = GRID_DIM * BLOCK_DIM;
 	clock_gettime(CLOCK_REALTIME, &start);
 	// size_t heapszie = 256 * 1024 * 1024;
 	// cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
@@ -194,7 +198,7 @@ void* run_simulation_thread(void *arg) {
 	srand (0);
 	
 	// while (true) {
-	for(int index = 0; index <= MAX_INDEX; index++){
+	for(int index = 1; index <= MAX_INDEX; index++){
 		board =  new CudaBoard(a->bd_size);
 		for (int i = 0; i < len; i++) {
 			board->update_board(a->seq[i]);
@@ -388,7 +392,7 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 
 			// run_simulation <<< grid_dim, block_dim >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase.get(), cuda_step.get(), cuda_sim.get(),
 			//         bd_size, time(NULL), std::min(MAX_GAME_TIME_9_9, timeLeft));
-			run_simulation <<< grid_dim, block_dim >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
+			run_simulation <<< GRID_DIM, BLOCK_DIM >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
 			        bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
 			cudaCheckError();
 

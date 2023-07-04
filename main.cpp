@@ -1,16 +1,19 @@
 #include <stdio.h>
-#include "CudaGo.h"
-#include "mcts.h"
-#include "point.h"
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <cuda.h>
 
+#include "CudaGo.h"
+#include "mcts.h"
+#include "point.h"
+#include "scheduled.hpp"
+
 #define TIME_EACH_MOVE 2*60*1000 // ms
 
 int main(int argc, char *argv[]) {
+	register_to_scheduler();
 	size_t heapszie = 1024 * 1024 * 1024;
 	cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
     int cpu_threads_num = 64;
@@ -118,5 +121,6 @@ int main(int argc, char *argv[]) {
 	printf("score:%d\n", board.score());
 	printf("player1 time: %lf \n", player1_time);
 	printf("player2 time: %lf \n", player2_time);
+	unregister_to_scheduler();
 }
 

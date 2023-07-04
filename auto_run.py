@@ -7,6 +7,7 @@ import os.path
 from openpyxl import Workbook, load_workbook
 import psutil
 from nvitop import *
+import math
 
 def create_excel(file):
     wb = Workbook()
@@ -110,6 +111,20 @@ def run():
     # print("sleep 5 min to seperate")
     # time.sleep(300)
 
+def branch_run():
+    if "pthread-norand" == branch:
+        omp_num_threads = 0
+        run()
+    elif "openmp-depend" == branch:
+        for omp_num_threads in omp_num_threads_list:
+            os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
+            run()
+    elif "openmp-depend-modify-rst" == branch:
+        for omp_num_threads in omp_num_threads_list:
+            for rst_threads_num in rst_threads_num_list:
+                os.environ["OMP_NUM_THREADS"] = "{}, {}".format(omp_num_threads, rst_threads_num)
+                run()
+
 # python auto_run.py --branch="pthread-norand" --loop_num=1 --parallel_num_list="1" 
 # --cpu_threads_num_list="0" --omp_num_threads_list="2" --rst_threads_num_list="0" --board_size_list="15" 
 # --max_index_range="10 20 10" --file=0626-test --grid_dim_range="128 2048 128" --block_dim_range="128 2048 128"
@@ -123,10 +138,13 @@ board_size_list = []
 max_index_range = []
 grid_dim_range = []
 block_dim_range = []
+gpu_dim_list = []
+gpu_plus_cpu = []
 file = "../data/test.xlsx"
 options = "-b:-l:-p:-c:-o:-r:-s:-i:-f:"
 long_options = ["branch=", "loop_num=", "parallel_num_list=", "cpu_threads_num_list=", "omp_num_threads_list=",
-                "rst_threads_num_list=", "board_size_list=", "max_index_range=", "grid_dim_range=", "block_dim_range=", "file="]
+                "rst_threads_num_list=", "board_size_list=", "max_index_range=", "grid_dim_range=", "block_dim_range=", 
+                "gpu_dim_list=", "gpu_plus_cpu=", "file="]
 opts,args = getopt.getopt(sys.argv[1:], options, long_options)
 for opt_name,opt_value in opts:
     if opt_name in ('-b', "--branch"):
@@ -149,15 +167,40 @@ for opt_name,opt_value in opts:
         grid_dim_range = list(map(int, opt_value.split(" ")))
     if opt_name in ("--block_dim_range"):
         block_dim_range = list(map(int, opt_value.split(" ")))
+    if opt_name in ("--gpu_dim_list"):
+        gpu_dim_list = list(map(int, opt_value.split(" ")))
+    if opt_name in ("--gpu_plus_cpu"):
+        gpu_plus_cpu = list(map(int, opt_value.split(" ")))
     if opt_name in ('-f', "--file"):
         file = "../data/{}.xlsx".format(opt_value)
 
+if len(gpu_dim_list) != 0 and len(gpu_plus_cpu) != 0:
+    print("do not give both values: gpu_dim_list, gpu_plus_cpu")
+    exit()
+elif len(gpu_dim_list) != 0 and len(gpu_plus_cpu) == 0:
+    temp = []
+    for i in range(0, gpu_dim_list[len(gpu_dim_list)-2], 1):
+        temp.append(math.pow(2, i))
+    grid_dim_range = temp
+    block_dim_range = temp
+    
+    temp = []
+    for i in gpu_dim_list:
+        temp.append(math.pow(2, i))
+    gpu_dim_list = temp
+else:
+    grid_dim_range = range(grid_dim_range[0], grid_dim_range[1], grid_dim_range[2])
+    block_dim_range = range(block_dim_range[0], block_dim_range[1], block_dim_range[2])
+    
+print(gpu_dim_list)
 print("branch: {}, loop_num: {}, parallel_num_list: {}, cpu_threads_num_list: {}, omp_num_threads_list: {}, \
                 rst_threads_num_list: {}, board_size_list: {}, max_index_range: {}, grid_dim_range: {}, block_dim_range: {}, file: {}".format(
                 branch_list, loop_num, parallel_num_list, cpu_threads_num_list, omp_num_threads_list,
                 rst_threads_num_list, board_size_list, max_index_range, grid_dim_range, block_dim_range, file))
 
 lock = threading.Lock()
+omp_num_threads = 0
+rst_threads_num = 0
 for branch in branch_list:
     os.system("git checkout " + branch)
     os.system("make")
@@ -167,17 +210,17 @@ for branch in branch_list:
         for parallel_num in parallel_num_list:
             for cpu_threads_num in cpu_threads_num_list:
                 for max_index in range(max_index_range[0], max_index_range[1], max_index_range[2]):
-                    for grid_dim in range(grid_dim_range[0], grid_dim_range[1], grid_dim_range[2]):
-                        for block_dim in range(block_dim_range[0], block_dim_range[1], block_dim_range[2]):
-                            if "pthread-norand" == branch:
-                                omp_num_threads = 0
+                    for block_dim in block_dim_range:
+                    
+                        if len(gpu_plus_cpu) != 0:
+                            for gpc in gpu_plus_cpu:
+                                grid_dim = int((gpc - cpu_threads_num*max_index) / block_dim)
+                                if grid_dim <= 0: continue
                                 run()
-                            elif "openmp-depend" == branch:
-                                for omp_num_threads in omp_num_threads_list:
-                                    os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
-                                    run()
-                            elif "openmp-depend-modify-rst" == branch:
-                                for omp_num_threads in omp_num_threads_list:
-                                    for rst_threads_num in rst_threads_num_list:
-                                        os.environ["OMP_NUM_THREADS"] = "{}, {}".format(omp_num_threads, rst_threads_num)
-                                        run()
+                                
+                        if len(gpu_dim_list) != 0:
+                            for grid_dim in grid_dim_range:
+                                if (grid_dim * block_dim) not in gpu_dim_list:
+                                    continue
+                                run()
+                            
