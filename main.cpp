@@ -10,13 +10,14 @@
 #include "point.h"
 #include "scheduled.hpp"
 
-#define TIME_EACH_MOVE 2*60*1000 // ms
+#define TIME_EACH_MOVE 2 * 60 * 1000 // ms
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	register_to_scheduler();
 	size_t heapszie = 1024 * 1024 * 1024;
 	cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
-    int cpu_threads_num = 64;
+	int cpu_threads_num = 64;
 	int rst_threads_num = 16;
 	int max_count = 10;
 	int max_index = 10;
@@ -25,66 +26,65 @@ int main(int argc, char *argv[]) {
 	int num_moves = 100;
 	int grid_dim = 2048;
 	int block_dim = 1;
-    const char *optstring = "hn:c:i:s:m:r:";
+	const char *optstring = "hn:c:i:s:m:r:";
 	const option opts[] = {
-        {"help", no_argument, nullptr, 'h'},
-        {"cpu_threads_num", optional_argument, nullptr, 'n'},
-        {"max_count", optional_argument, nullptr, 'c'},
-        {"max_index", optional_argument, nullptr, 'i'},
+		{"help", no_argument, nullptr, 'h'},
+		{"cpu_threads_num", optional_argument, nullptr, 'n'},
+		{"max_count", optional_argument, nullptr, 'c'},
+		{"max_index", optional_argument, nullptr, 'i'},
 		{"bd_size", optional_argument, nullptr, 's'},
 		{"num_moves", optional_argument, nullptr, 'm'},
 		{"rst_threads_num", optional_argument, nullptr, 'r'},
 		{"grid_dim", optional_argument, nullptr, 'g'},
-		{"block_dim", optional_argument, nullptr, 'b'}
-    };
-    while((opt = getopt_long(argc, argv, optstring, opts, nullptr)) != -1)
-    {
-        switch(opt)
-        {
+		{"block_dim", optional_argument, nullptr, 'b'}};
+	while ((opt = getopt_long(argc, argv, optstring, opts, nullptr)) != -1)
+	{
+		switch (opt)
+		{
 		case 'h':
 			printf("-n: cpu_threads_num, number of threads in parallel area\n"
-			"-c: max_count, it affects the GPU computation time\n"
-			"-i: max_index, it affects the CPU computation time\n"
-			"-s: bd_size, the size of board\n"
-			"-m: num_moves, determines how many moves the two players will make\n"
-			"-r: rst_threads_num, nested parallel number in function run_simulation_thread\n");
+				   "-c: max_count, it affects the GPU computation time\n"
+				   "-i: max_index, it affects the CPU computation time\n"
+				   "-s: bd_size, the size of board\n"
+				   "-m: num_moves, determines how many moves the two players will make\n"
+				   "-r: rst_threads_num, nested parallel number in function run_simulation_thread\n");
 			return 0;
-        case 'n':
+		case 'n':
 			cpu_threads_num = atoi(optarg);
-            continue;
-        case 'c':
+			continue;
+		case 'c':
 			max_count = atoi(optarg);
-            continue;
-        case 'i':
+			continue;
+		case 'i':
 			max_index = atoi(optarg);
-            continue;
-        case 's':
+			continue;
+		case 's':
 			bd_size = atoi(optarg);
-            continue;
+			continue;
 		case 'm':
 			num_moves = atoi(optarg);
-            continue;
+			continue;
 		case 'r':
 			rst_threads_num = atoi(optarg);
-            continue;
+			continue;
 		case 'g':
 			grid_dim = atoi(optarg);
-            continue;
+			continue;
 		case 'b':
 			block_dim = atoi(optarg);
-            continue;
-        default:
-            printf("error opt");
-            return -1;
-        }
-    }
+			continue;
+		default:
+			printf("error opt");
+			return -1;
+		}
+	}
 	printf("cpu_threads_num = %d\nrst_threads_num = %d\nmax_count = %d\nmax_index = %d\n"
-	"bd_size = %d\nnum_moves = %d\ngrid_dim = %d\nblock_dim = %d\n", 
-	cpu_threads_num, rst_threads_num, max_count, max_index,
-	bd_size, num_moves, grid_dim, block_dim);
+		   "bd_size = %d\nnum_moves = %d\ngrid_dim = %d\nblock_dim = %d\n",
+		   cpu_threads_num, rst_threads_num, max_count, max_index,
+		   bd_size, num_moves, grid_dim, block_dim);
 
-	Mcts* player1;
-	Mcts* player2;
+	Mcts *player1;
+	Mcts *player2;
 	Point p;
 	CudaBoard board(bd_size);
 	int step = 0;
@@ -93,7 +93,8 @@ int main(int argc, char *argv[]) {
 	clock_t start, end;
 	double player1_time = 0.0;
 	double player2_time = 0.0;
-	while (step < num_moves) {
+	while (step < num_moves)
+	{
 		player1 = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
 		p = player1->run(cpu_threads_num, rst_threads_num, max_count, max_index, grid_dim, block_dim);
@@ -123,4 +124,3 @@ int main(int argc, char *argv[]) {
 	printf("player2 time: %lf \n", player2_time);
 	unregister_to_scheduler();
 }
-

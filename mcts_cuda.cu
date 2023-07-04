@@ -27,15 +27,16 @@
 #define MAX_GAME_TIME_11_11 4000.0
 
 // Macro for checking cuda errors following a cuda launch or api call
-#define cudaCheckError()                                       \
-{                                                            \
-	cudaError_t e = cudaGetLastError();                        \
-	if (e != cudaSuccess) {                                    \
-		printf("Cuda failure %s:%d: '%s'\n", __FILE__, __LINE__, \
-				cudaGetErrorString(e));                           \
-		exit(EXIT_FAILURE);                                      \
-	}                                                          \
-}
+#define cudaCheckError()                                             \
+	{                                                                \
+		cudaError_t e = cudaGetLastError();                          \
+		if (e != cudaSuccess)                                        \
+		{                                                            \
+			printf("Cuda failure %s:%d: '%s'\n", __FILE__, __LINE__, \
+				   cudaGetErrorString(e));                           \
+			exit(EXIT_FAILURE);                                      \
+		}                                                            \
+	}
 
 static int GRID_DIM = 2048;
 static int BLOCK_DIM = 1;
@@ -48,24 +49,25 @@ static int MAX_INDEX = 100;
 
 bool checkAbort();
 __device__ bool checkAbortCuda(long long int elapse, double timeLeft);
-__global__ void run_simulation(int incre, int total, int* iarray, int* jarray, int* len, double* win_increase,
-                               int* step, double* sim, int bd_size, unsigned int seed, double time);
-__device__ __host__ Point* createPoints(int bd_size);
-void* run_simulation_thread(void *arg);
-void* run_simulation_thread_cpu(void *arg);
-void get_sequence(TreeNode* node, int* len, int* iarray, int*jarray);
+__global__ void run_simulation(int incre, int total, int *iarray, int *jarray, int *len, double *win_increase,
+							   int *step, double *sim, int bd_size, unsigned int seed, double time);
+__device__ __host__ Point *createPoints(int bd_size);
+void *run_simulation_thread(void *arg);
+void *run_simulation_thread_cpu(void *arg);
+void get_sequence(TreeNode *node, int *len, int *iarray, int *jarray);
 
 void memoryUsage();
 
-Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index, int grid_dim, int block_dim) {
+Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index, int grid_dim, int block_dim)
+{
 
 	scheduled(&grid_dim, block_dim, &cpu_threads_num, max_index);
 	printf("grid_dim %d, block_dim %d, cpu_threads_num %d, max_index %d\n", grid_dim, block_dim, cpu_threads_num, max_index);
-    CPU_THREADS_NUM = cpu_threads_num;
+	CPU_THREADS_NUM = cpu_threads_num;
 	RST_THREADS_NUM = rst_threads_num;
 	MAX_COUNT = max_count;
 	MAX_INDEX = max_index;
-    GRID_DIM = grid_dim;
+	GRID_DIM = grid_dim;
 	BLOCK_DIM = block_dim;
 	THREADS_NUM = GRID_DIM * BLOCK_DIM;
 	clock_gettime(CLOCK_REALTIME, &start);
@@ -73,21 +75,26 @@ Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max
 	// cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapszie);
 
 	// while (true) {
-		if (mode == GPU) {
-			run_iteration_gpu(root);
-		} else if (mode == CPU) {
-			run_iteration_cpu(root);
-		}
+	if (mode == GPU)
+	{
+		run_iteration_gpu(root);
+	}
+	else if (mode == CPU)
+	{
+		run_iteration_cpu(root);
+	}
 
 	// 	if (checkAbort()) break;
 	// }
 	double maxv = -1.0;
-	TreeNode* best = NULL;
-	std::vector<TreeNode*> children = root->get_children();
-	for (std::vector<TreeNode*>::iterator it = children.begin(); it != children.end(); it++) {
-		TreeNode* c = *it;
+	TreeNode *best = NULL;
+	std::vector<TreeNode *> children = root->get_children();
+	for (std::vector<TreeNode *>::iterator it = children.begin(); it != children.end(); it++)
+	{
+		TreeNode *c = *it;
 		double v = c->wins / (c->sims + EPSILON);
-		if (v > maxv) {
+		if (v > maxv)
+		{
 			maxv = v;
 			best = c;
 		}
@@ -96,16 +103,19 @@ Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max
 	return best->get_sequence().back();
 }
 
-TreeNode* Mcts::selection(TreeNode* node) {
+TreeNode *Mcts::selection(TreeNode *node)
+{
 	double maxv = -1.0;
-	TreeNode* maxn = NULL;
+	TreeNode *maxn = NULL;
 	double n = node->sims;
 
-	std::vector<TreeNode*> children = node->get_children();
-	for (std::vector<TreeNode*>::iterator it = children.begin(); it != children.end(); it++) {
-		TreeNode* c = *it;
+	std::vector<TreeNode *> children = node->get_children();
+	for (std::vector<TreeNode *>::iterator it = children.begin(); it != children.end(); it++)
+	{
+		TreeNode *c = *it;
 		double v = c->wins / (c->sims + EPSILON) + C * sqrt(log(n + EPSILON) / (c->sims + EPSILON));
-		if (v > maxv) {
+		if (v > maxv)
+		{
 			maxv = v;
 			maxn = c;
 		}
@@ -123,8 +133,9 @@ win_increase: 	sizeof(double) * THREADS_NUM
 step: 			sizeof(int) * THREADS_NUM
 sim: 			sizeof(double) * THREADS_NUM
 */
-__global__ void run_simulation(int incre, int total, int* iarray, int* jarray, int* len, double* win_increase,
-                               int* step, double* sim, int bd_size, unsigned int seed, double time) {
+__global__ void run_simulation(int incre, int total, int *iarray, int *jarray, int *len, double *win_increase,
+							   int *step, double *sim, int bd_size, unsigned int seed, double time)
+{
 	long long int start_game = clock64();
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -139,20 +150,25 @@ __global__ void run_simulation(int incre, int total, int* iarray, int* jarray, i
 	CudaBoard board(bd_size);
 
 	int id = index / incre;
-	if (id >= total) id = total - 1;
+	if (id >= total)
+		id = total - 1;
 	int p = 0;
-	for (int i = 0; i < id; i++) {
+	for (int i = 0; i < id; i++)
+	{
 		p += len[i];
 	}
-	for (int i = p; i < p + len[id]; i++) {
+	for (int i = p; i < p + len[id]; i++)
+	{
 		board.update_board(Point(iarray[i], jarray[i]));
 	}
 	COLOR player = board.ToPlay();
 
-	while (step[index] < MAX_STEP) {
+	while (step[index] < MAX_STEP)
+	{
 		// printf("step[index] %d", step[index]);
 		Point move = board.get_next_moves_device(0.5);
-		if (move.i < 0) {
+		if (move.i < 0)
+		{
 			break;
 		}
 		board.update_board(move);
@@ -168,24 +184,31 @@ __global__ void run_simulation(int incre, int total, int* iarray, int* jarray, i
 	}
 
 	int score = board.score();
-	if ((score > 0 && player == BLACK)
-	        || (score < 0 && player == WHITE)) {
-		if (abort) {
+	if ((score > 0 && player == BLACK) || (score < 0 && player == WHITE))
+	{
+		if (abort)
+		{
 			win_increase[index] += (double)step[index] / MAX_STEP;
-		} else {
+		}
+		else
+		{
 			win_increase[index]++;
 		}
 	}
 
-	if (abort) {
-		sim[index] += (double) step[index] / MAX_STEP;
-	} else {
+	if (abort)
+	{
+		sim[index] += (double)step[index] / MAX_STEP;
+	}
+	else
+	{
 		sim[index]++;
 	}
 }
 
-void* run_simulation_thread(void *arg) {
-	thread_arg* a = static_cast<thread_arg*> (arg);
+void *run_simulation_thread(void *arg)
+{
+	thread_arg *a = static_cast<thread_arg *>(arg);
 	int len = a->len;
 	double timeLeft = a->time;
 	int cur_step = 0;
@@ -194,22 +217,26 @@ void* run_simulation_thread(void *arg) {
 	bool abort = false;
 	COLOR player;
 	clock_t start = clock();
-	CudaBoard* board;
-	srand (0);
-	
+	CudaBoard *board;
+	srand(0);
+
 	// while (true) {
-	for(int index = 1; index <= MAX_INDEX; index++){
-		board =  new CudaBoard(a->bd_size);
-		for (int i = 0; i < len; i++) {
+	for (int index = 1; index <= MAX_INDEX; index++)
+	{
+		board = new CudaBoard(a->bd_size);
+		for (int i = 0; i < len; i++)
+		{
 			board->update_board(a->seq[i]);
 		}
 		player = board->ToPlay();
 		// if ((1000.0 * (clock() - start) / CLOCKS_PER_SEC) > timeLeft) break;
 
 		cur_step = 0;
-		while (cur_step < MAX_STEP) {
+		while (cur_step < MAX_STEP)
+		{
 			std::vector<Point> moves = board->get_next_moves_host();
-			if (moves.size() == 0) {
+			if (moves.size() == 0)
+			{
 				break;
 			}
 			board->update_board(moves[rand() % moves.size()]);
@@ -223,23 +250,30 @@ void* run_simulation_thread(void *arg) {
 			// }
 			cur_step++;
 		}
-		if (index == MAX_INDEX){
+		if (index == MAX_INDEX)
+		{
 			abort = true;
 		}
 
 		int score = board->score();
-		if ((score > 0 && player == BLACK)
-		        || (score < 0 && player == WHITE)) {
-			if (abort) {
+		if ((score > 0 && player == BLACK) || (score < 0 && player == WHITE))
+		{
+			if (abort)
+			{
 				a->win += (double)cur_step / MAX_STEP;
-			} else {
+			}
+			else
+			{
 				a->win += 1.0;
 			}
 		}
 
-		if (abort) {
+		if (abort)
+		{
 			a->sim += (double)cur_step / MAX_STEP;
-		} else {
+		}
+		else
+		{
 			a->sim += 1.0;
 		}
 		// if ((MAX_GAME_TIME_9_9 * (clock() - start) / CLOCKS_PER_SEC) > timeLeft) break;
@@ -248,25 +282,29 @@ void* run_simulation_thread(void *arg) {
 	return;
 }
 
-void* run_simulation_thread_cpu(void *arg) {
-	thread_arg* a = static_cast<thread_arg*> (arg);
+void *run_simulation_thread_cpu(void *arg)
+{
+	thread_arg *a = static_cast<thread_arg *>(arg);
 	int len = a->len;
 	int cur_step = 0;
 	a->sim = 1.0;
 	a->win = 0.0;
 	COLOR player;
-	CudaBoard* board;
-	srand (0);
+	CudaBoard *board;
+	srand(0);
 
-	board =  new CudaBoard(a->bd_size);
-	for (int i = 0; i < len; i++) {
+	board = new CudaBoard(a->bd_size);
+	for (int i = 0; i < len; i++)
+	{
 		board->update_board(a->seq[i]);
 	}
 	player = board->ToPlay();
 
-	while (cur_step < MAX_STEP) {
+	while (cur_step < MAX_STEP)
+	{
 		std::vector<Point> moves = board->get_next_moves_host();
-		if (moves.size() == 0) {
+		if (moves.size() == 0)
+		{
 			break;
 		}
 		board->update_board(moves[rand() % moves.size()]);
@@ -274,38 +312,46 @@ void* run_simulation_thread_cpu(void *arg) {
 	}
 
 	int score = board->score();
-	if ((score > 0 && player == BLACK)
-	        || (score < 0 && player == WHITE)) {
+	if ((score > 0 && player == BLACK) || (score < 0 && player == WHITE))
+	{
 		a->win = 1.0;
 	}
 
 	return;
 }
 
-void Mcts::back_propagation(TreeNode* node, int win_increase, int sim_increase) {
+void Mcts::back_propagation(TreeNode *node, int win_increase, int sim_increase)
+{
 	bool lv = false;
-	while (node->parent != NULL) {
+	while (node->parent != NULL)
+	{
 		node = node->parent;
 		node->sims += sim_increase;
-		if (lv)node->wins += win_increase;
+		if (lv)
+			node->wins += win_increase;
 		lv = !lv;
 	}
 }
 
-void Mcts::update(TreeNode* node, double* win, double* sim,  int incre, int thread_num) {
-	std::vector<TreeNode*> children = node->get_children();
-	for (int i = 0; i < thread_num; i++) {
+void Mcts::update(TreeNode *node, double *win, double *sim, int incre, int thread_num)
+{
+	std::vector<TreeNode *> children = node->get_children();
+	for (int i = 0; i < thread_num; i++)
+	{
 		int id = i / incre;
-		if (id >= children.size()) id = children.size() - 1;
+		if (id >= children.size())
+			id = children.size() - 1;
 		back_propagation(children[id], win[id], sim[id]);
 	}
 }
 
-void Mcts::expand(TreeNode* node) {
-	CudaBoard* cur_board = get_board(node->get_sequence(), bd_size);
+void Mcts::expand(TreeNode *node)
+{
+	CudaBoard *cur_board = get_board(node->get_sequence(), bd_size);
 
 	std::vector<Point> moves_vec = cur_board->get_next_moves_host();
-	while (moves_vec.size() > 0) {
+	while (moves_vec.size() > 0)
+	{
 		Point nxt_move = moves_vec.back();
 		node->add_children(new TreeNode(node->get_sequence(), nxt_move));
 		moves_vec.pop_back();
@@ -313,46 +359,53 @@ void Mcts::expand(TreeNode* node) {
 	delete cur_board;
 }
 
-void Mcts::run_iteration_gpu(TreeNode* node) {
-	std::stack<TreeNode*> S;
+void Mcts::run_iteration_gpu(TreeNode *node)
+{
+	std::stack<TreeNode *> S;
 	S.push(node);
-    // printf("bd_size: %d", bd_size);
+	// printf("bd_size: %d", bd_size);
 	int total = bd_size * bd_size;
-	int* c_i = new int[total * total];
-	int* c_j = new int[total * total];
-	int* cpu_len = new int[total];
-	double* win_increase = new double[THREADS_NUM];
-	double* sim_increase = new double[THREADS_NUM];
-	int* step_increase = new int[THREADS_NUM];
-	int* c_i_d; // device
-	int* c_j_d; // device
-	int* cuda_len;
+	int *c_i = new int[total * total];
+	int *c_j = new int[total * total];
+	int *cpu_len = new int[total];
+	double *win_increase = new double[THREADS_NUM];
+	double *sim_increase = new double[THREADS_NUM];
+	int *step_increase = new int[THREADS_NUM];
+	int *c_i_d; // device
+	int *c_j_d; // device
+	int *cuda_len;
 
 	cudaMalloc(&cuda_len, sizeof(int) * total);
-	cudaMalloc(&c_i_d, sizeof(int)* total * total);
-	cudaMalloc(&c_j_d, sizeof(int)* total * total);
+	cudaMalloc(&c_i_d, sizeof(int) * total * total);
+	cudaMalloc(&c_j_d, sizeof(int) * total * total);
 
 	// hybrid cpu threads info
-	pthread_t* tids = (pthread_t*)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
-	thread_arg* args = (thread_arg*)malloc(sizeof(thread_arg) * CPU_THREADS_NUM);
-	for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
-	   args[ti].seq = (Point*)malloc(sizeof(Point) * 300);
+	pthread_t *tids = (pthread_t *)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
+	thread_arg *args = (thread_arg *)malloc(sizeof(thread_arg) * CPU_THREADS_NUM);
+	for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
+	{
+		args[ti].seq = (Point *)malloc(sizeof(Point) * 300);
 	}
 
-	while (!S.empty()) {
+	while (!S.empty())
+	{
 		count++;
-		TreeNode* f = S.top();
+		TreeNode *f = S.top();
 		S.pop();
-		if (!f->is_expandable()) {
+		if (!f->is_expandable())
+		{
 			S.push(selection(f));
-		} else {
+		}
+		else
+		{
 			// expand current node, run expansion and simulation
 			f->set_expandable(false);
 			expand(f);
 
 			get_sequence(f, cpu_len, c_i, c_j);
 			int csize = f->get_children().size();
-			if (csize == 0) {
+			if (csize == 0)
+			{
 				abort = true;
 				break;
 			}
@@ -360,10 +413,12 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 
 			// create cpu threads
 			int children_index = 0;
-			std::vector<TreeNode*> children = f->get_children();
-			for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
+			std::vector<TreeNode *> children = f->get_children();
+			for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
+			{
 				args[ti].len = (children[children_index]->get_sequence()).size();
-				for (int pi = 0; pi < args[ti].len; pi++) {
+				for (int pi = 0; pi < args[ti].len; pi++)
+				{
 					args[ti].seq[pi] = (children[children_index]->get_sequence())[pi];
 				}
 				args[ti].time = MAX_GAME_TIME_9_9;
@@ -373,34 +428,34 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 				children_index = (children_index + 1) % csize;
 			}
 
-			double* cuda_win_increase;
-			double* cuda_sim;
-			int* cuda_step;
+			double *cuda_win_increase;
+			double *cuda_sim;
+			int *cuda_step;
 			cudaMalloc(&cuda_win_increase, sizeof(double) * THREADS_NUM);
 			cudaMalloc(&cuda_sim, sizeof(double) * THREADS_NUM);
 			cudaMalloc(&cuda_step, sizeof(int) * THREADS_NUM);
 
-			cudaMemcpy(c_i_d, c_i, sizeof(int)*total * total, cudaMemcpyHostToDevice);
-			cudaMemcpy(c_j_d, c_j, sizeof(int)*total * total, cudaMemcpyHostToDevice);
-			cudaMemcpy(cuda_len, cpu_len, sizeof(int)*total, cudaMemcpyHostToDevice);
+			cudaMemcpy(c_i_d, c_i, sizeof(int) * total * total, cudaMemcpyHostToDevice);
+			cudaMemcpy(c_j_d, c_j, sizeof(int) * total * total, cudaMemcpyHostToDevice);
+			cudaMemcpy(cuda_len, cpu_len, sizeof(int) * total, cudaMemcpyHostToDevice);
 
 			uint64_t diff;
 			clock_gettime(CLOCK_REALTIME, &end);
 			diff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
 			double timeLeft = maxTime - diff / MILLION;
 
-
 			// run_simulation <<< grid_dim, block_dim >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase.get(), cuda_step.get(), cuda_sim.get(),
 			//         bd_size, time(NULL), std::min(MAX_GAME_TIME_9_9, timeLeft));
-			run_simulation <<< GRID_DIM, BLOCK_DIM >>> (incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
-			        bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
+			run_simulation<<<GRID_DIM, BLOCK_DIM>>>(incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
+													bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
 			cudaCheckError();
 
 			// collect cpu thread data
 			children_index = 0;
 			double thread_sim = 0.0;
 			double thread_win = 0.0;
-			for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
+			for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
+			{
 				pthread_join(tids[ti], NULL);
 				thread_sim += args[ti].sim;
 				thread_win += args[ti].win;
@@ -416,7 +471,8 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 			double total_sim = 0.0;
 			double total_win = 0.0;
 			int total_step = 0;
-			for (int i = 0; i < THREADS_NUM; i++) {
+			for (int i = 0; i < THREADS_NUM; i++)
+			{
 				total_sim += sim_increase[i];
 				total_win += win_increase[i];
 				total_step += step_increase[i];
@@ -427,47 +483,58 @@ void Mcts::run_iteration_gpu(TreeNode* node) {
 			cudaFree(cuda_step);
 			cudaFree(cuda_sim);
 
-			if (checkAbort())break;
+			if (checkAbort())
+				break;
 		}
 
-		if (checkAbort()) break;
+		if (checkAbort())
+			break;
 	}
-	delete [] c_i;
-	delete [] c_j;
-	delete [] cpu_len;
-	delete [] win_increase;
-	delete [] sim_increase;
-	delete [] step_increase;
+	delete[] c_i;
+	delete[] c_j;
+	delete[] cpu_len;
+	delete[] win_increase;
+	delete[] sim_increase;
+	delete[] step_increase;
 }
 
-void Mcts::run_iteration_cpu(TreeNode* node) {
+void Mcts::run_iteration_cpu(TreeNode *node)
+{
 	// printf("run_iteration_cpu start \n");
-	std::stack<TreeNode*> S;
+	std::stack<TreeNode *> S;
 	S.push(node);
-	pthread_t* tids = (pthread_t*)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
-	thread_arg* args = (thread_arg*)malloc(sizeof(thread_arg) * CPU_THREADS_NUM);
-	for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
-		args[ti].seq = (Point*)malloc(sizeof(Point) * 300);
+	pthread_t *tids = (pthread_t *)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
+	thread_arg *args = (thread_arg *)malloc(sizeof(thread_arg) * CPU_THREADS_NUM);
+	for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
+	{
+		args[ti].seq = (Point *)malloc(sizeof(Point) * 300);
 	}
 
-	while (!S.empty()) {
+	while (!S.empty())
+	{
 		count++;
 		// printf("run_iteration_cpu: count=%d \n", count);
-		TreeNode* f = S.top();
+		TreeNode *f = S.top();
 		S.pop();
-		if (!f->is_expandable()) {
+		if (!f->is_expandable())
+		{
 			S.push(selection(f));
-		} else {
+		}
+		else
+		{
 			// expand current node, run expansion and simulation
 			f->set_expandable(false);
 			expand(f);
 
-			std::vector<TreeNode*> children = f->get_children();
+			std::vector<TreeNode *> children = f->get_children();
 			// printf("run_iteration_cpu: children.size()=%d \n", children.size());
-			for (size_t i = 0; i < children.size(); i++) {
-				for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
+			for (size_t i = 0; i < children.size(); i++)
+			{
+				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
+				{
 					args[ti].len = (children[i]->get_sequence()).size();
-					for (int pi = 0; pi < args[ti].len; pi++) {
+					for (int pi = 0; pi < args[ti].len; pi++)
+					{
 						args[ti].seq[pi] = (children[i]->get_sequence())[pi];
 					}
 					args[ti].bd_size = bd_size;
@@ -478,7 +545,8 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 
 				double win = 0.0;
 				double sim = 0.0;
-				for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
+				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
+				{
 					pthread_join(tids[ti], NULL);
 					sim += args[ti].sim;
 					win += args[ti].win;
@@ -487,12 +555,15 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 
 				back_propagation(children[i], win, sim);
 				abort = true;
-				if (checkAbort())break;
+				if (checkAbort())
+					break;
 			}
-			if (checkAbort())break;
+			if (checkAbort())
+				break;
 		}
 
-		if (checkAbort()) break;
+		if (checkAbort())
+			break;
 	}
 
 	// for (int ti = 0; ti < CPU_THREADS_NUM; ti++) {
@@ -503,13 +574,16 @@ void Mcts::run_iteration_cpu(TreeNode* node) {
 	// printf("run_iteration_cpu finish \n");
 }
 
-void get_sequence(TreeNode* node, int* len, int* iarray, int*jarray) {
-	std::vector<TreeNode*> children = node->get_children();
+void get_sequence(TreeNode *node, int *len, int *iarray, int *jarray)
+{
+	std::vector<TreeNode *> children = node->get_children();
 	int p = 0;
-	for (size_t i = 0; i < children.size(); i++) {
+	for (size_t i = 0; i < children.size(); i++)
+	{
 		std::vector<Point> sequence = children[i]->get_sequence();
 		len[i] = sequence.size();
-		for (int it = 0; it < len[i]; it++) {
+		for (int it = 0; it < len[i]; it++)
+		{
 			iarray[it + p] = sequence[it].i;
 			jarray[it + p] = sequence[it].j;
 		}
@@ -517,53 +591,60 @@ void get_sequence(TreeNode* node, int* len, int* iarray, int*jarray) {
 	}
 }
 
-bool Mcts::checkAbort() {
+bool Mcts::checkAbort()
+{
 	// if (!abort) {
 	// 	uint64_t diff;
 	// 	clock_gettime(CLOCK_REALTIME, &end);
 	// 	diff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
 	// 	abort = diff / MILLION > maxTime;
 	// }
-	if (count >= MAX_COUNT){
+	if (count >= MAX_COUNT)
+	{
 		abort = true;
 	}
 	return abort;
 }
 
-CudaBoard* Mcts::get_board(std::vector<Point> sequence, int bd_size) {
-	CudaBoard* bd = new CudaBoard(bd_size);
-	for (std::vector<Point>::iterator it = sequence.begin(); it != sequence.end(); it++) {
+CudaBoard *Mcts::get_board(std::vector<Point> sequence, int bd_size)
+{
+	CudaBoard *bd = new CudaBoard(bd_size);
+	for (std::vector<Point>::iterator it = sequence.begin(); it != sequence.end(); it++)
+	{
 		bd->update_board((*it));
 	}
 	return bd;
 }
 
-__device__ __host__ Point* createPoints(int bd_size) {
+__device__ __host__ Point *createPoints(int bd_size)
+{
 	int len = bd_size + 2;
-	Point* point = static_cast<Point*> (malloc(sizeof(Point) * len * len));
-	for (int i = 0; i < len; i++) {
-		for (int j = 0; j < len; j++) {
+	Point *point = static_cast<Point *>(malloc(sizeof(Point) * len * len));
+	for (int i = 0; i < len; i++)
+	{
+		for (int j = 0; j < len; j++)
+		{
 			point[i * len + j] = Point(i, j);
 		}
 	}
 	return point;
 }
 
-void memoryUsage() {
-	size_t free_byte ;
+void memoryUsage()
+{
+	size_t free_byte;
 
-	size_t total_byte ;
+	size_t total_byte;
 
-	cudaMemGetInfo( &free_byte, &total_byte ) ;
+	cudaMemGetInfo(&free_byte, &total_byte);
 
-	double free_db = (double)free_byte ;
+	double free_db = (double)free_byte;
 
-	double total_db = (double)total_byte ;
+	double total_db = (double)total_byte;
 
-	double used_db = total_db - free_db ;
+	double used_db = total_db - free_db;
 
 	printf("GPU memory usage: used = %f, free = %f MB, total = %f MB\n",
 
-	       used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0, total_db / 1024.0 / 1024.0);
+		   used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0, total_db / 1024.0 / 1024.0);
 }
-
