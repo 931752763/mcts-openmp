@@ -15,7 +15,7 @@
 #include "CudaGo.h"
 #include "deque.h"
 #include "point.h"
-#include "scheduled.hpp"
+// #include "get_schedule.hpp"
 
 #define BILLION 1000000000L
 #define MILLION 1000000.0
@@ -61,8 +61,8 @@ void memoryUsage();
 Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index, int grid_dim, int block_dim)
 {
 
-	scheduled(&grid_dim, block_dim, &cpu_threads_num, max_index);
-	printf("grid_dim %d, block_dim %d, cpu_threads_num %d, max_index %d\n", grid_dim, block_dim, cpu_threads_num, max_index);
+	// scheduled(&grid_dim, block_dim, &cpu_threads_num, max_index);
+	// printf("grid_dim %d, block_dim %d, cpu_threads_num %d, max_index %d\n", grid_dim, block_dim, cpu_threads_num, max_index);
 	CPU_THREADS_NUM = cpu_threads_num;
 	RST_THREADS_NUM = rst_threads_num;
 	MAX_COUNT = max_count;
