@@ -78,10 +78,10 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
-	printf("cpu_threads_num = %d\nrst_threads_num = %d\nmax_count = %d\nmax_index = %d\n"
-		   "bd_size = %d\nnum_moves = %d\ngrid_dim = %d\nblock_dim = %d\n",
-		   cpu_threads_num, rst_threads_num, max_count, max_index,
-		   bd_size, num_moves, grid_dim, block_dim);
+	// printf("cpu_threads_num = %d\nrst_threads_num = %d\nmax_count = %d\nmax_index = %d\n"
+	// 	   "bd_size = %d\nnum_moves = %d\ngrid_dim = %d\nblock_dim = %d\n",
+	// 	   cpu_threads_num, rst_threads_num, max_count, max_index,
+	// 	   bd_size, num_moves, grid_dim, block_dim);
 
 	Mcts *player1;
 	Mcts *player2;
@@ -93,34 +93,43 @@ int main(int argc, char *argv[])
 	clock_t start, end;
 	double player1_time = 0.0;
 	double player2_time = 0.0;
+	int cpu_time = 0, gpu_time = 0;
+	int total_cpu_time = 0, total_gpu_time = 0;
 	while (step < num_moves)
 	{
 		player1 = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
-		p = player1->run(cpu_threads_num, rst_threads_num, max_count, max_index, grid_dim, block_dim);
+		p = player1->run(cpu_threads_num, rst_threads_num, max_count, max_index, grid_dim, block_dim, &cpu_time, &gpu_time);
+		total_cpu_time += cpu_time;
+		total_gpu_time += gpu_time;
 		end = clock();
 		player1_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;
-		printf("player1 : (%d,%d)\n", p.i, p.j);
+		// printf("player1 : (%d,%d)\n", p.i, p.j);
 		seq.push_back(p);
 		board.update_board(p);
-		board.print_board();
+		// board.print_board();
 
 		player2 = new Mcts(GPU, bd_size, TIME_EACH_MOVE, seq);
 		start = clock();
-		p = player2->run(cpu_threads_num, rst_threads_num, max_count, max_index, grid_dim, block_dim);
+		p = player2->run(cpu_threads_num, rst_threads_num, max_count, max_index, grid_dim, block_dim, &cpu_time, &gpu_time);
+		total_cpu_time += cpu_time;
+		total_gpu_time += gpu_time;
 		end = clock();
 		player2_time += (double)(end - start) / CLOCKS_PER_SEC;
 		step++;
 		seq.push_back(p);
-		printf("player2 : (%d,%d)\n", p.i, p.j);
+		// printf("player2 : (%d,%d)\n", p.i, p.j);
 		board.update_board(p);
-		board.print_board();
+		// board.print_board();
 		delete player1;
 		delete player2;
 	}
-	printf("score:%d\n", board.score());
-	printf("player1 time: %lf \n", player1_time);
-	printf("player2 time: %lf \n", player2_time);
+
+	printf("%d, %d\n", total_cpu_time, total_gpu_time);
+
+	// printf("score:%d\n", board.score());
+	// printf("player1 time: %lf \n", player1_time);
+	// printf("player2 time: %lf \n", player2_time);
 	// unregister_to_scheduler();
 }

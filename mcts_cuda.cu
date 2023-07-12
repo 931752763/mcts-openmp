@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <algorithm>
 
 #include "mcts.h"
 #include "CudaGo.h"
@@ -58,7 +60,7 @@ void get_sequence(TreeNode *node, int *len, int *iarray, int *jarray);
 
 void memoryUsage();
 
-Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index, int grid_dim, int block_dim)
+Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max_index, int grid_dim, int block_dim, int* cpu_time, int* gpu_time)
 {
 	// scheduled(&grid_dim, block_dim, &cpu_threads_num, max_index);
 	// printf("grid_dim %d, block_dim %d, cpu_threads_num %d, max_index %d\n", grid_dim, block_dim, cpu_threads_num, max_index);
@@ -77,7 +79,7 @@ Point Mcts::run(int cpu_threads_num, int rst_threads_num, int max_count, int max
 	// {
 	if (mode == GPU)
 	{
-		run_iteration_gpu(root);
+		run_iteration_gpu(root, cpu_time, gpu_time);
 	}
 	else if (mode == CPU)
 	{
@@ -166,7 +168,6 @@ __global__ void run_simulation(int incre, int total, int *iarray, int *jarray, i
 
 	while (step[index] < MAX_STEP)
 	{
-		// printf("step[index] %d", step[index]);
 		Point move = board.get_next_moves_device(0.5);
 		if (move.i < 0)
 		{
@@ -209,8 +210,6 @@ __global__ void run_simulation(int incre, int total, int *iarray, int *jarray, i
 
 void *run_simulation_thread(void *arg)
 {
-	// 	printf("arg address: %p\n", (void *)&arg);
-	// 	printf("run_simulation_thread ttid: %ld\n", syscall(SYS_gettid));
 	thread_arg *a = static_cast<thread_arg *>(arg);
 	int len = a->len;
 	double timeLeft = a->time;
@@ -282,13 +281,11 @@ void *run_simulation_thread(void *arg)
 		// if ((MAX_GAME_TIME_9_9 * (clock() - start) / CLOCKS_PER_SEC) > timeLeft) break;
 		delete board;
 	}
-	// printf("run_simulation_thread ttid: %ld RETURN\n", syscall(SYS_gettid));
 	return;
 }
 
 void *run_simulation_thread_cpu(void *arg)
 {
-	// printf("run_simulation_thread_cpu ttid: %ld\n", syscall(SYS_gettid));
 	thread_arg *a = static_cast<thread_arg *>(arg);
 	int len = a->len;
 	int cur_step = 0;
@@ -365,11 +362,10 @@ void Mcts::expand(TreeNode *node)
 	delete cur_board;
 }
 
-void Mcts::run_iteration_gpu(TreeNode *node)
+void Mcts::run_iteration_gpu(TreeNode *node, int* cpu_time, int* gpu_time)
 {
 	std::stack<TreeNode *> S;
 	S.push(node);
-	// printf("bd_size: %d", bd_size);
 	int total = bd_size * bd_size;
 	int *c_i = new int[total * total];
 	int *c_j = new int[total * total];
@@ -396,8 +392,6 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 	while (!S.empty())
 	{
 		count++;
-		printf("stack size: %d \n", S.size());
-		printf("count: %d \n", count);
 		TreeNode *f = S.top();
 		S.pop();
 		if (!f->is_expandable())
@@ -434,6 +428,11 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 			double thread_sim = 0.0;
 			double thread_win = 0.0;
 
+			*cpu_time = 0;
+			*gpu_time = 0;
+			struct timeval cpu_gpu_start, cpu_end, gpu_end;
+			gettimeofday(&cpu_gpu_start, NULL);
+
 #pragma omp parallel
 #pragma omp single
 			{
@@ -464,18 +463,17 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 					clock_gettime(CLOCK_REALTIME, &end);
 					diff = BILLION * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
 					double timeLeft = maxTime - diff / MILLION;
-					// printf("run_simulation1 \n");
+
 					run_simulation<<<GRID_DIM, BLOCK_DIM>>>(incre, csize, c_i_d, c_j_d, cuda_len, cuda_win_increase, cuda_step, cuda_sim,
 															bd_size, 0, std::min(MAX_GAME_TIME_9_9, timeLeft));
 					cudaCheckError();
-					// printf("run_simulation2 \n");
 
 					// block method
 					cudaMemcpy(win_increase, cuda_win_increase, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 					cudaMemcpy(step_increase, cuda_step, sizeof(int) * THREADS_NUM, cudaMemcpyDeviceToHost);
 					cudaMemcpy(sim_increase, cuda_sim, sizeof(double) * THREADS_NUM, cudaMemcpyDeviceToHost);
 					cudaCheckError();
-					// printf("after cudaMemcpy \n");
+
 					double total_sim = 0.0;
 					double total_win = 0.0;
 					int total_step = 0;
@@ -485,14 +483,18 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 						total_win += win_increase[i];
 						total_step += step_increase[i];
 					}
-					// printf("after add \n");
+
 					cudaFree(cuda_win_increase);
 					cudaFree(cuda_step);
 					cudaFree(cuda_sim);
-					// printf("after cudaFree \n");
+
+					gettimeofday(&gpu_end, NULL);
+					int timeuse = 1000000 * (gpu_end.tv_sec - cpu_gpu_start.tv_sec) + gpu_end.tv_usec - cpu_gpu_start.tv_usec;
+					*gpu_time = std::max(*gpu_time, timeuse);
+					// printf("gpu time: %d us\n", *gpu_time);
 				}
 
-				// 			printf("gpu: back_propagation \n");
+
 				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 				{
 #pragma omp task depend(in : args[ti])
@@ -502,9 +504,16 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 						thread_win += args[ti].win;
 						back_propagation(children[children_index], thread_win, thread_sim);
 						children_index = (children_index + 1) % csize;
+						
+						gettimeofday(&cpu_end, NULL);
+						int timeuse = 1000000 * (cpu_end.tv_sec - cpu_gpu_start.tv_sec) + cpu_end.tv_usec - cpu_gpu_start.tv_usec;
+						*cpu_time = std::max(*cpu_time, timeuse);
+						// printf("cpu time: %d us\n", *cpu_time);
 					}
 				}
 			}
+
+			// printf("max: cpu time: %d us, gpu time %d us\n", *cpu_time, *gpu_time);
 
 			update(f, win_increase, sim_increase, incre, THREADS_NUM);
 
@@ -525,7 +534,6 @@ void Mcts::run_iteration_gpu(TreeNode *node)
 
 void Mcts::run_iteration_cpu(TreeNode *node)
 {
-	// printf("run_iteration_cpu start\n");
 	std::stack<TreeNode *> S;
 	S.push(node);
 	// pthread_t *tids = (pthread_t *)malloc(sizeof(pthread_t) * CPU_THREADS_NUM);
@@ -538,8 +546,6 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 	while (!S.empty())
 	{
 		count++;
-		printf("stack size: %d \n", S.size());
-		printf("count: %d \n", count);
 		TreeNode *f = S.top();
 		S.pop();
 		if (!f->is_expandable())
@@ -586,7 +592,6 @@ void Mcts::run_iteration_cpu(TreeNode *node)
 						}
 					}
 				}
-				// 				printf("back_propagation \n");
 				back_propagation(children[i], win, sim);
 				abort = true;
 				if (checkAbort())
