@@ -85,7 +85,7 @@ private:
 	bool abort; 
 	int bd_size;
 	MODE mode;
-	int count ;
+	int count = 0;
 
 public:
 	Mcts(MODE m, int size, double time) {
