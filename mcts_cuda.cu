@@ -436,23 +436,6 @@ void Mcts::run_iteration_gpu(TreeNode *node, int* cpu_time, int* gpu_time)
 #pragma omp parallel
 #pragma omp single
 			{
-				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
-				{
-#pragma omp task depend(out : args[ti])
-					{
-						args[ti].len = (children[children_index]->get_sequence()).size();
-						for (int pi = 0; pi < args[ti].len; pi++)
-						{
-							args[ti].seq[pi] = (children[children_index]->get_sequence())[pi];
-						}
-						args[ti].time = MAX_GAME_TIME_9_9;
-						args[ti].bd_size = bd_size;
-						args[ti].tid = ti;
-						// pthread_create(&tids[ti], NULL, run_simulation_thread, (void *)(&args[ti]));
-						run_simulation_thread((void *)&args[ti]);
-						children_index = (children_index + 1) % csize;
-					}
-				}
 #pragma omp task
 				{
 					cudaMemcpy(c_i_d, c_i, sizeof(int) * total * total, cudaMemcpyHostToDevice);
@@ -491,9 +474,26 @@ void Mcts::run_iteration_gpu(TreeNode *node, int* cpu_time, int* gpu_time)
 					gettimeofday(&gpu_end, NULL);
 					int timeuse = 1000000 * (gpu_end.tv_sec - cpu_gpu_start.tv_sec) + gpu_end.tv_usec - cpu_gpu_start.tv_usec;
 					*gpu_time = std::max(*gpu_time, timeuse);
-					// printf("gpu time: %d us\n", *gpu_time);
+					// printf("3 gpu time: %d us\n", *gpu_time);
 				}
 
+				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
+				{
+#pragma omp task depend(out : args[ti])
+					{
+						args[ti].len = (children[children_index]->get_sequence()).size();
+						for (int pi = 0; pi < args[ti].len; pi++)
+						{
+							args[ti].seq[pi] = (children[children_index]->get_sequence())[pi];
+						}
+						args[ti].time = MAX_GAME_TIME_9_9;
+						args[ti].bd_size = bd_size;
+						args[ti].tid = ti;
+						// pthread_create(&tids[ti], NULL, run_simulation_thread, (void *)(&args[ti]));
+						run_simulation_thread((void *)&args[ti]);
+						children_index = (children_index + 1) % csize;
+					}
+				}
 
 				for (int ti = 0; ti < CPU_THREADS_NUM; ti++)
 				{
